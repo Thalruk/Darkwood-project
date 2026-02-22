@@ -23,9 +23,13 @@ public class PlayerController : MonoBehaviour
         horizontal = Input.GetAxisRaw("Horizontal");
         movementDirection = new Vector2(horizontal, vertical).normalized;
 
-        Vector3 mouseScreen = Input.mousePosition;
-        mouseScreen.z = 0;
-        mousePosition = cam.ScreenToWorldPoint(mouseScreen);
+        Vector3 mousePos = Input.mousePosition;
+        if (mousePos.x >= 0 && mousePos.x <= Screen.width && mousePos.y >= 0 && mousePos.y <= Screen.height)
+        {
+            Vector3 mouseScreen = mousePos;
+            mouseScreen.z = 10f;
+            mousePosition = cam.ScreenToWorldPoint(mouseScreen);
+        }
     }
 
     private void FixedUpdate()
