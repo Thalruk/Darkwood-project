@@ -38,12 +38,21 @@ TagManager:
   - 
   - 
   m_SortingLayers:
+  - name: Background
+    uniqueID: 1801066513
+    locked: 0
   - name: Default
     uniqueID: 0
     locked: 0
-  - name: test
-    uniqueID: 1978516463
-    locked: 0
   - name: Walls
     uniqueID: 3138900713
+    locked: 0
+  - name: Enemy
+    uniqueID: 1978516463
+    locked: 0
+  - name: Middle
+    uniqueID: 3406180217
+    locked: 0
+  - name: Front
+    uniqueID: 519820521
     locked: 0

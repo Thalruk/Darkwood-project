@@ -5,8 +5,10 @@ Shader "Custom/Test"
         _MainTex("Diffuse", 2D) = "white" {}
         _MaskTex("Mask", 2D) = "white" {}
         _NormalMap("Normal Map", 2D) = "bump" {}
+        _AlphaBoost("Alpha Boost", Range(1, 20)) = 5.0
+        _AlphaThreshold("Alpha Threshold", Range(0, 1)) = 0.05
 
-        // Legacy properties. They're here so that materials using this shader can gracefully fallback to the legacy sprite shader.
+        // Legacy properties.
         [HideInInspector] _Color("Tint", Color) = (1,1,1,1)
         [HideInInspector] _RendererColor("RendererColor", Color) = (1,1,1,1)
         [HideInInspector] _Flip("Flip", Vector) = (1,1,1,1)
@@ -22,6 +24,7 @@ Shader "Custom/Test"
         Cull Off
         ZWrite Off
 
+        // --- PASS 1: G³ówne oœwietlenie 2D ---
         Pass
         {
             Tags { "LightMode" = "Universal2D" }
@@ -33,7 +36,6 @@ Shader "Custom/Test"
             #pragma vertex CombinedShapeLightVertex
             #pragma fragment CombinedShapeLightFragment
 
-			// GPU Instancing
             #pragma multi_compile_instancing
             #pragma multi_compile USE_SHAPE_LIGHT_TYPE_0 __
             #pragma multi_compile USE_SHAPE_LIGHT_TYPE_1 __
@@ -45,18 +47,18 @@ Shader "Custom/Test"
             {
                 float3 positionOS   : POSITION;
                 float4 color        : COLOR;
-                float2  uv          : TEXCOORD0;
+                float2 uv           : TEXCOORD0;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
             struct Varyings
             {
-                float4  positionCS  : SV_POSITION;
-                half4   color       : COLOR;
-                float2  uv          : TEXCOORD0;
-                half2   lightingUV  : TEXCOORD1;
+                float4 positionCS   : SV_POSITION;
+                half4  color        : COLOR;
+                float2 uv           : TEXCOORD0;
+                half2  lightingUV  : TEXCOORD1;
                 #if defined(DEBUG_DISPLAY)
-                float3  positionWS  : TEXCOORD2;
+                float3 positionWS   : TEXCOORD2;
                 #endif
                 UNITY_VERTEX_OUTPUT_STEREO
             };
@@ -67,9 +69,12 @@ Shader "Custom/Test"
             SAMPLER(sampler_MainTex);
             TEXTURE2D(_MaskTex);
             SAMPLER(sampler_MaskTex);
+            
             half4 _MainTex_ST;
             float4 _Color;
             half4 _RendererColor;
+            half _AlphaBoost;      
+            half _AlphaThreshold;
 
             #if USE_SHAPE_LIGHT_TYPE_0
             SHAPE_LIGHT(0)
@@ -93,29 +98,33 @@ Shader "Custom/Test"
                 UNITY_SETUP_INSTANCE_ID(v);
                 UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
 
-#ifdef UNITY_INSTANCING_ENABLED
+                #ifdef UNITY_INSTANCING_ENABLED
                 v.positionOS = UnityFlipSprite(v.positionOS, unity_SpriteFlip);
-#endif
+                #endif
+                
                 o.positionCS = TransformObjectToHClip(v.positionOS);
+                
                 #if defined(DEBUG_DISPLAY)
                 o.positionWS = TransformObjectToWorld(v.positionOS);
                 #endif
+                
                 o.uv = TRANSFORM_TEX(v.uv, _MainTex);
                 o.lightingUV = half2(ComputeScreenPos(o.positionCS / o.positionCS.w).xy);
 
                 o.color = v.color * _Color * _RendererColor;
-#ifdef UNITY_INSTANCING_ENABLED
+                #ifdef UNITY_INSTANCING_ENABLED
                 o.color *= unity_SpriteColor;
-#endif
+                #endif
                 return o;
             }
 
             #include "Packages/com.unity.render-pipelines.universal/Shaders/2D/Include/CombinedShapeLightShared.hlsl"
 
-           half4 CombinedShapeLightFragment(Varyings i) : SV_Target
+            half4 CombinedShapeLightFragment(Varyings i) : SV_Target
             {
                 const half4 main = i.color * SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, i.uv);
                 const half4 mask = SAMPLE_TEXTURE2D(_MaskTex, sampler_MaskTex, i.uv);
+    
                 SurfaceData2D surfaceData;
                 InputData2D inputData;
 
@@ -124,9 +133,12 @@ Shader "Custom/Test"
 
                 half4 finalColor = CombinedShapeLightShared(surfaceData, inputData);
 
-                half luminance = max(finalColor.r, max(finalColor.g, finalColor.b));
+                half luminance = dot(finalColor.rgb, half3(0.2126, 0.7152, 0.0722));
 
-                finalColor.a = min(main.a, luminance * 5.0);
+                half boostedLuminance = luminance * _AlphaBoost;
+                half visibility = smoothstep(_AlphaThreshold, _AlphaThreshold + 0.05, boostedLuminance);
+    
+                finalColor.a = main.a * visibility;
 
                 return finalColor;
             }
@@ -144,7 +156,6 @@ Shader "Custom/Test"
             #pragma vertex NormalsRenderingVertex
             #pragma fragment NormalsRenderingFragment
 
-            // GPU Instancing
             #pragma multi_compile_instancing
 
             struct Attributes
@@ -171,7 +182,7 @@ Shader "Custom/Test"
             SAMPLER(sampler_MainTex);
             TEXTURE2D(_NormalMap);
             SAMPLER(sampler_NormalMap);
-            half4 _NormalMap_ST;  // Is this the right way to do this?
+            half4 _NormalMap_ST;
 
             Varyings NormalsRenderingVertex(Attributes attributes)
             {
@@ -179,18 +190,20 @@ Shader "Custom/Test"
                 UNITY_SETUP_INSTANCE_ID(attributes);
                 UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
 
-#ifdef UNITY_INSTANCING_ENABLED
+                #ifdef UNITY_INSTANCING_ENABLED
                 attributes.positionOS = UnityFlipSprite(attributes.positionOS, unity_SpriteFlip);
-#endif
+                #endif
+                
                 o.positionCS = TransformObjectToHClip(attributes.positionOS);
                 o.uv = TRANSFORM_TEX(attributes.uv, _NormalMap);
                 o.color = attributes.color;
                 o.normalWS = -GetViewForwardDir();
                 o.tangentWS = TransformObjectToWorldDir(attributes.tangent.xyz);
                 o.bitangentWS = cross(o.normalWS, o.tangentWS) * attributes.tangent.w;
-#ifdef UNITY_INSTANCING_ENABLED
+                
+                #ifdef UNITY_INSTANCING_ENABLED
                 o.color *= unity_SpriteColor;
-#endif
+                #endif
                 return o;
             }
 
@@ -217,7 +230,6 @@ Shader "Custom/Test"
             #pragma vertex UnlitVertex
             #pragma fragment UnlitFragment
 
-            // GPU Instancing
             #pragma multi_compile_instancing
 
             struct Attributes
@@ -234,7 +246,7 @@ Shader "Custom/Test"
                 float4  color           : COLOR;
                 float2  uv              : TEXCOORD0;
                 #if defined(DEBUG_DISPLAY)
-                float3  positionWS  : TEXCOORD2;
+                float3  positionWS      : TEXCOORD2;
                 #endif
                 UNITY_VERTEX_OUTPUT_STEREO
             };
@@ -251,41 +263,29 @@ Shader "Custom/Test"
                 UNITY_SETUP_INSTANCE_ID(attributes);
                 UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
 
-#ifdef UNITY_INSTANCING_ENABLED
+                #ifdef UNITY_INSTANCING_ENABLED
                 attributes.positionOS = UnityFlipSprite(attributes.positionOS, unity_SpriteFlip);
-#endif
-                o.positionCS = TransformObjectToHClip(attributes.positionOS);
-                #if defined(DEBUG_DISPLAY)
-                o.positionWS = TransformObjectToWorld(v.positionOS);
                 #endif
+                
+                o.positionCS = TransformObjectToHClip(attributes.positionOS);
+                
+                #if defined(DEBUG_DISPLAY)
+                o.positionWS = TransformObjectToWorld(attributes.positionOS);
+                #endif
+                
                 o.uv = TRANSFORM_TEX(attributes.uv, _MainTex);
                 o.color = attributes.color * _Color * _RendererColor;
-#ifdef UNITY_INSTANCING_ENABLED
+                
+                #ifdef UNITY_INSTANCING_ENABLED
                 o.color *= unity_SpriteColor;
-#endif
+                #endif
                 return o;
             }
 
             float4 UnlitFragment(Varyings i) : SV_Target
             {
-                float4 mainTex = i.color * SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, i.uv);
-
-                #if defined(DEBUG_DISPLAY)
-                SurfaceData2D surfaceData;
-                InputData2D inputData;
-                half4 debugColor = 0;
-
-                InitializeSurfaceData(mainTex.rgb, mainTex.a, surfaceData);
-                InitializeInputData(i.uv, inputData);
-                SETUP_DEBUG_DATA_2D(inputData, i.positionWS);
-
-                if(CanDebugOverrideOutputColor(surfaceData, inputData, debugColor))
-                {
-                    return debugColor;
-                }
-                #endif
-
-                return mainTex;
+                // Obiekt ma byæ niewidoczny, gdy nie ma oœwietlenia 2D
+                return float4(0, 0, 0, 0);
             }
             ENDHLSL
         }
