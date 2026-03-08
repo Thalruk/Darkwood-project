@@ -1,12 +1,13 @@
 using UnityEngine;
 using UnityEngine.Rendering.Universal;
-using UnityEngine.UI; // Wymagane do obs³ugi Slidera
 
 public class PlayerController : MonoBehaviour
 {
     [Header("Movement")]
     [SerializeField] float speed = 5f;
     [SerializeField] float aimSpeed = 2f;
+    [SerializeField] float dragRotationSpeed = 150f;
+    [SerializeField] float dragSpeedModifier = 0.5f;
 
     [Header("Flashlight")]
     [SerializeField] Light2D flashlight;
@@ -20,13 +21,17 @@ public class PlayerController : MonoBehaviour
     [SerializeField] float gunFalloff = 0.75f;
     [SerializeField] float gunIntensity = 1;
 
-    [Header("Interaction & Dragging")]
-    [SerializeField] float interactionRange = 2f;
-    [SerializeField] LayerMask draggableLayer;
-    [SerializeField] float chargeRequired = 1.5f;
+    [Header("Interaction")]
+    [SerializeField] LayerMask interactableMask;
+    [Range(0.1f, 5f)]
+    [SerializeField] float interactRange = 1f;
     [SerializeField] KeyCode interactKey = KeyCode.E;
 
-    // --- Zmienne prywatne ---
+    float holdTimer = 0f;
+    [SerializeField] float holdThreshold = 0.25f;
+    IInteractable[] detectedInteractables;
+    bool isCounting = false;
+
     float vertical;
     float horizontal;
     Vector2 movementDirection;
@@ -34,46 +39,34 @@ public class PlayerController : MonoBehaviour
     Rigidbody2D rb;
     Camera cam;
 
+    Vector2 lookDir;
     bool isAiming = false;
     bool isDragging = false;
-    float currentCharge = 0f;
-    GameObject currentTarget;
-    Slider targetSlider;
 
     void Start()
     {
         rb = GetComponent<Rigidbody2D>();
         cam = Camera.main;
     }
-
+    #region Update
     void Update()
     {
-        // 1. Podstawowy Input
         HandleInput();
 
-        // 2. Logika Celowania i Strza³u (Twoja oryginalna)
         HandleCombatLogic();
 
-        // 3. System Interakcji (Nowy)
-        if (isDragging)
-        {
-            HandleDraggingLogic();
-        }
-        else
-        {
-            HandleDetectionLogic();
-        }
+        HandleInteractable();
 
-        // 4. Efekty wizualne (Latarka i B³ysk)
         UpdateVisuals();
     }
 
     void HandleInput()
     {
+        isAiming = Input.GetButton("Fire2");
+
         vertical = Input.GetAxisRaw("Vertical");
         horizontal = Input.GetAxisRaw("Horizontal");
         movementDirection = new Vector2(horizontal, vertical).normalized;
-        isAiming = Input.GetButton("Fire2");
 
         Vector3 mousePos = Input.mousePosition;
         if (mousePos.x >= 0 && mousePos.x <= Screen.width && mousePos.y >= 0 && mousePos.y <= Screen.height)
@@ -83,97 +76,6 @@ public class PlayerController : MonoBehaviour
             mousePosition = cam.ScreenToWorldPoint(mouseScreen);
         }
     }
-
-    void HandleDetectionLogic()
-    {
-        // Raycast puszczany w stronê, w któr¹ patrzy przód gracza (transform.up w 2D top-down)
-        RaycastHit2D hit = Physics2D.Raycast(transform.position, transform.up, interactionRange, draggableLayer);
-
-        if (hit.collider != null)
-        {
-            if (currentTarget != hit.collider.gameObject)
-            {
-                ResetOldTarget(); // Wy³¹cz UI poprzedniego, jeœli szybko zmieniliœmy cel
-                currentTarget = hit.collider.gameObject;
-                ToggleTargetUI(true);
-            }
-
-            // £adowanie interakcji
-            if (Input.GetKey(interactKey))
-            {
-                currentCharge += Time.deltaTime;
-                if (targetSlider) targetSlider.value = currentCharge / chargeRequired;
-
-                if (currentCharge >= chargeRequired)
-                {
-                    StartDragging();
-                }
-            }
-            else
-            {
-                currentCharge = 0f;
-                if (targetSlider) targetSlider.value = 0f;
-            }
-        }
-        else
-        {
-            ResetOldTarget();
-        }
-    }
-
-    void StartDragging()
-    {
-        isDragging = true;
-        currentCharge = 0f;
-
-        // "Przyklejamy" obiekt do gracza
-        currentTarget.transform.SetParent(this.transform);
-
-        // Wy³¹czamy kolizje/fizykê obiektu, ¿eby nie blokowa³ gracza podczas ruchu
-        Rigidbody2D targetRb = currentTarget.GetComponent<Rigidbody2D>();
-        if (targetRb) targetRb.isKinematic = true;
-
-        ToggleTargetUI(false); // Chowamy slider podczas ci¹gniêcia
-    }
-
-    void HandleDraggingLogic()
-    {
-        // Puœæ obiekt po naciœniêciu klawisza
-        if (Input.GetKeyDown(interactKey))
-        {
-            isDragging = false;
-            currentTarget.transform.SetParent(null);
-
-            Rigidbody2D targetRb = currentTarget.GetComponent<Rigidbody2D>();
-            if (targetRb) targetRb.isKinematic = false;
-
-            currentTarget = null;
-        }
-    }
-
-    void ResetOldTarget()
-    {
-        if (currentTarget != null && !isDragging)
-        {
-            ToggleTargetUI(false);
-            currentTarget = null;
-            currentCharge = 0f;
-        }
-    }
-
-    void ToggleTargetUI(bool state)
-    {
-        if (currentTarget == null) return;
-
-        // Szukamy Canvasu w dziecku obiektu
-        Canvas canvas = currentTarget.GetComponentInChildren<Canvas>(true);
-        if (canvas) canvas.gameObject.SetActive(state);
-
-        if (state) targetSlider = currentTarget.GetComponentInChildren<Slider>();
-    }
-
-    // --- Reszta Twoich oryginalnych metod ---
-
     void HandleCombatLogic()
     {
         if (Input.GetButtonDown("Fire1") && isAiming)
@@ -182,13 +84,70 @@ public class PlayerController : MonoBehaviour
             {
                 Shoot();
             }
-            else
-            {
-                Debug.Log("Jeszcze nie wycelowano!");
-            }
         }
     }
 
+    IInteractable activeDraggable;
+
+    void HandleInteractable()
+    {
+        if (Input.GetKeyDown(interactKey) && activeDraggable != null)
+        {
+            activeDraggable.OnRelease(this);
+            activeDraggable = null;
+            isCounting = false;
+            return;
+        }
+
+        if (Input.GetKeyDown(interactKey) && activeDraggable == null)
+        {
+            RaycastHit2D hit = Physics2D.Raycast(transform.position, lookDir.normalized, interactRange, interactableMask);
+            if (hit.collider != null)
+            {
+                detectedInteractables = hit.collider.GetComponents<IInteractable>();
+                isCounting = true;
+                holdTimer = 0f;
+            }
+        }
+
+        if (isCounting && Input.GetKey(interactKey))
+        {
+            holdTimer += Time.deltaTime;
+            if (holdTimer >= holdThreshold)
+            {
+                if (detectedInteractables != null)
+                {
+                    foreach (var inter in detectedInteractables)
+                    {
+                        inter.OnLongInteract(this);
+                        if (inter is Draggable) activeDraggable = inter;
+                    }
+                }
+                isCounting = false;
+            }
+        }
+
+        if (Input.GetKeyUp(interactKey) && isCounting)
+        {
+            if (detectedInteractables != null)
+            {
+                foreach (var inter in detectedInteractables) inter.OnShortInteract();
+            }
+            isCounting = false;
+            detectedInteractables = null;
+        }
+    }
+
+    void Shoot()
+    {
+        if (gunLight != null)
+        {
+            gunLight.enabled = true;
+            gunLight.intensity = gunIntensity;
+            gunLight.pointLightOuterRadius = 15f;
+            gunLight.falloffIntensity = gunFalloff;
+        }
+    }
     void UpdateVisuals()
     {
         if (flashlight != null)
@@ -203,36 +162,53 @@ public class PlayerController : MonoBehaviour
         if (gunLight != null && gunLight.intensity > 0)
         {
             gunLight.intensity -= flashFadeSpeed * Time.deltaTime;
-            if (gunLight.intensity < 0.01f) gunLight.intensity = 0f;
+            if (gunLight.intensity < 0.01f)
+            {
+                gunLight.intensity = 0f;
+                gunLight.enabled = false;
+            }
         }
     }
-
+    #endregion Update
     private void FixedUpdate()
     {
         float currentSpeed = isAiming ? aimSpeed : speed;
-        rb.MovePosition(rb.position + movementDirection * currentSpeed * Time.fixedDeltaTime);
+        if (isDragging) currentSpeed *= dragSpeedModifier;
+        rb.MovePosition(rb.position + currentSpeed * Time.fixedDeltaTime * movementDirection);
     }
 
+    #region LateUpdate
     private void LateUpdate()
     {
         LookAtMouse();
     }
 
+
     void LookAtMouse()
     {
-        Vector2 lookDir = mousePosition - rb.position;
-        float angle = Mathf.Atan2(lookDir.y, lookDir.x) * Mathf.Rad2Deg;
-        rb.rotation = angle - 90f;
+        lookDir = mousePosition - rb.position;
+        float targetAngle = Mathf.Atan2(lookDir.y, lookDir.x) * Mathf.Rad2Deg - 90f;
+
+        if (activeDraggable != null)
+        {
+            float lerpedAngle = Mathf.MoveTowardsAngle(rb.rotation, targetAngle, dragRotationSpeed * Time.deltaTime);
+            rb.MoveRotation(lerpedAngle);
+        }
+        else
+        {
+            rb.rotation = targetAngle;
+        }
+    }
+    #endregion LateUpdate   
+
+    public void SetDragging(bool dragging)
+    {
+        isDragging = dragging;
     }
 
-    void Shoot()
+    private void OnDrawGizmos()
     {
-        if (gunLight != null)
-        {
-            gunLight.intensity = gunIntensity;
-            gunLight.pointLightOuterRadius = 15f;
-            gunLight.falloffIntensity = gunFalloff;
-            gunLight.color = Color.white;
-        }
+        Gizmos.color = Color.red;
+        Gizmos.DrawLine(transform.position, transform.position + (Vector3)(lookDir.normalized * interactRange));
     }
 }
