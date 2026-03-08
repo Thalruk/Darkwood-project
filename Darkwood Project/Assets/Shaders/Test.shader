@@ -8,7 +8,6 @@ Shader "Custom/Test"
         _AlphaBoost("Alpha Boost", Range(1, 20)) = 5.0
         _AlphaThreshold("Alpha Threshold", Range(0, 1)) = 0.05
 
-        // Legacy properties.
         [HideInInspector] _Color("Tint", Color) = (1,1,1,1)
         [HideInInspector] _RendererColor("RendererColor", Color) = (1,1,1,1)
         [HideInInspector] _Flip("Flip", Vector) = (1,1,1,1)
@@ -24,7 +23,6 @@ Shader "Custom/Test"
         Cull Off
         ZWrite Off
 
-        // --- PASS 1: G³ówne oœwietlenie 2D ---
         Pass
         {
             Tags { "LightMode" = "Universal2D" }
@@ -284,7 +282,6 @@ Shader "Custom/Test"
 
             float4 UnlitFragment(Varyings i) : SV_Target
             {
-                // Obiekt ma byæ niewidoczny, gdy nie ma oœwietlenia 2D
                 return float4(0, 0, 0, 0);
             }
             ENDHLSL

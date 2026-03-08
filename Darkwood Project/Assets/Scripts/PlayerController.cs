@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.Rendering.Universal;
+using UnityEngine.UI; // Wymagane do obs³ugi Slidera
 
 public class PlayerController : MonoBehaviour
 {
@@ -13,6 +14,19 @@ public class PlayerController : MonoBehaviour
     [SerializeField] float aimAngle = 30f;
     [SerializeField] float lightLerpSpeed = 8f;
 
+    [Header("Gun")]
+    [SerializeField] Light2D gunLight;
+    [SerializeField] float flashFadeSpeed = 50f;
+    [SerializeField] float gunFalloff = 0.75f;
+    [SerializeField] float gunIntensity = 1;
+
+    [Header("Interaction & Dragging")]
+    [SerializeField] float interactionRange = 2f;
+    [SerializeField] LayerMask draggableLayer;
+    [SerializeField] float chargeRequired = 1.5f;
+    [SerializeField] KeyCode interactKey = KeyCode.E;
+
+    // --- Zmienne prywatne ---
     float vertical;
     float horizontal;
     Vector2 movementDirection;
@@ -21,6 +35,10 @@ public class PlayerController : MonoBehaviour
     Camera cam;
 
     bool isAiming = false;
+    bool isDragging = false;
+    float currentCharge = 0f;
+    GameObject currentTarget;
+    Slider targetSlider;
 
     void Start()
     {
@@ -30,31 +48,33 @@ public class PlayerController : MonoBehaviour
 
     void Update()
     {
-        // 1. Oœ ruchu
+        // 1. Podstawowy Input
+        HandleInput();
+
+        // 2. Logika Celowania i Strza³u (Twoja oryginalna)
+        HandleCombatLogic();
+
+        // 3. System Interakcji (Nowy)
+        if (isDragging)
+        {
+            HandleDraggingLogic();
+        }
+        else
+        {
+            HandleDetectionLogic();
+        }
+
+        // 4. Efekty wizualne (Latarka i B³ysk)
+        UpdateVisuals();
+    }
+
+    void HandleInput()
+    {
         vertical = Input.GetAxisRaw("Vertical");
         horizontal = Input.GetAxisRaw("Horizontal");
         movementDirection = new Vector2(horizontal, vertical).normalized;
-
-        // 2. Nas³uchiwanie prawego przycisku myszy (celowanie)
         isAiming = Input.GetButton("Fire2");
 
-        // 3. Nas³uchiwanie strza³u (lewy przycisk) - dzia³a tylko przy celowaniu
-        // 3. Nas³uchiwanie strza³u (lewy przycisk)
-        if (Input.GetButtonDown("Fire1") && isAiming)
-        {
-            // Zabezpieczenie: strzelamy tylko, jeœli latarka istnieje i jej k¹t prawie osi¹gn¹³ minimum
-            if (flashlight != null && Mathf.Abs(flashlight.pointLightOuterAngle - aimAngle) < 1f)
-            {
-                Shoot();
-            }
-            else
-            {
-                // Opcjonalnie: dŸwiêk pustego klikniêcia, jeœli gracz nacisn¹³ za wczeœnie
-                Debug.Log("Jeszcze nie wycelowano!");
-            }
-        }
-
-        // 4. Kalkulacja pozycji myszy
         Vector3 mousePos = Input.mousePosition;
         if (mousePos.x >= 0 && mousePos.x <= Screen.width && mousePos.y >= 0 && mousePos.y <= Screen.height)
         {
@@ -62,27 +82,139 @@ public class PlayerController : MonoBehaviour
             mouseScreen.z = 10f;
             mousePosition = cam.ScreenToWorldPoint(mouseScreen);
         }
+    }
 
-        // 5. P³ynne zwê¿anie i rozszerzanie latarki
+    void HandleDetectionLogic()
+    {
+        // Raycast puszczany w stronê, w któr¹ patrzy przód gracza (transform.up w 2D top-down)
+        RaycastHit2D hit = Physics2D.Raycast(transform.position, transform.up, interactionRange, draggableLayer);
+
+        if (hit.collider != null)
+        {
+            if (currentTarget != hit.collider.gameObject)
+            {
+                ResetOldTarget(); // Wy³¹cz UI poprzedniego, jeœli szybko zmieniliœmy cel
+                currentTarget = hit.collider.gameObject;
+                ToggleTargetUI(true);
+            }
+
+            // £adowanie interakcji
+            if (Input.GetKey(interactKey))
+            {
+                currentCharge += Time.deltaTime;
+                if (targetSlider) targetSlider.value = currentCharge / chargeRequired;
+
+                if (currentCharge >= chargeRequired)
+                {
+                    StartDragging();
+                }
+            }
+            else
+            {
+                currentCharge = 0f;
+                if (targetSlider) targetSlider.value = 0f;
+            }
+        }
+        else
+        {
+            ResetOldTarget();
+        }
+    }
+
+    void StartDragging()
+    {
+        isDragging = true;
+        currentCharge = 0f;
+
+        // "Przyklejamy" obiekt do gracza
+        currentTarget.transform.SetParent(this.transform);
+
+        // Wy³¹czamy kolizje/fizykê obiektu, ¿eby nie blokowa³ gracza podczas ruchu
+        Rigidbody2D targetRb = currentTarget.GetComponent<Rigidbody2D>();
+        if (targetRb) targetRb.isKinematic = true;
+
+        ToggleTargetUI(false); // Chowamy slider podczas ci¹gniêcia
+    }
+
+    void HandleDraggingLogic()
+    {
+        // Puœæ obiekt po naciœniêciu klawisza
+        if (Input.GetKeyDown(interactKey))
+        {
+            isDragging = false;
+            currentTarget.transform.SetParent(null);
+
+            Rigidbody2D targetRb = currentTarget.GetComponent<Rigidbody2D>();
+            if (targetRb) targetRb.isKinematic = false;
+
+            currentTarget = null;
+        }
+    }
+
+    void ResetOldTarget()
+    {
+        if (currentTarget != null && !isDragging)
+        {
+            ToggleTargetUI(false);
+            currentTarget = null;
+            currentCharge = 0f;
+        }
+    }
+
+    void ToggleTargetUI(bool state)
+    {
+        if (currentTarget == null) return;
+
+        // Szukamy Canvasu w dziecku obiektu
+        Canvas canvas = currentTarget.GetComponentInChildren<Canvas>(true);
+        if (canvas) canvas.gameObject.SetActive(state);
+
+        if (state) targetSlider = currentTarget.GetComponentInChildren<Slider>();
+    }
+
+    // --- Reszta Twoich oryginalnych metod ---
+
+    void HandleCombatLogic()
+    {
+        if (Input.GetButtonDown("Fire1") && isAiming)
+        {
+            if (flashlight != null && Mathf.Abs(flashlight.pointLightOuterAngle - aimAngle) < 1f)
+            {
+                Shoot();
+            }
+            else
+            {
+                Debug.Log("Jeszcze nie wycelowano!");
+            }
+        }
+    }
+
+    void UpdateVisuals()
+    {
         if (flashlight != null)
         {
             float targetOuterAngle = isAiming ? aimAngle : normalAngle;
-
-            // Wewnêtrzny k¹t niech bêdzie zawsze o 15 stopni mniejszy od zewnêtrznego (i nie mniejszy ni¿ 0)
             float targetInnerAngle = Mathf.Max(0f, targetOuterAngle - 15f);
 
-            // Zmieniamy oba k¹ty p³ynnie
             flashlight.pointLightInnerAngle = Mathf.Lerp(flashlight.pointLightInnerAngle, targetInnerAngle, Time.deltaTime * lightLerpSpeed);
             flashlight.pointLightOuterAngle = Mathf.Lerp(flashlight.pointLightOuterAngle, targetOuterAngle, Time.deltaTime * lightLerpSpeed);
+        }
+
+        if (gunLight != null && gunLight.intensity > 0)
+        {
+            gunLight.intensity -= flashFadeSpeed * Time.deltaTime;
+            if (gunLight.intensity < 0.01f) gunLight.intensity = 0f;
         }
     }
 
     private void FixedUpdate()
     {
-        // Ruch z uwzglêdnieniem kary do prêdkoœci przy celowaniu
         float currentSpeed = isAiming ? aimSpeed : speed;
-        rb.velocity = movementDirection * currentSpeed;
+        rb.MovePosition(rb.position + movementDirection * currentSpeed * Time.fixedDeltaTime);
+    }
 
+    private void LateUpdate()
+    {
         LookAtMouse();
     }
 
@@ -95,7 +227,12 @@ public class PlayerController : MonoBehaviour
 
     void Shoot()
     {
-        // Miejsce na instancjonowanie kuli i odrzut
-        Debug.Log("Pif paf! Strza³ oddany.");
+        if (gunLight != null)
+        {
+            gunLight.intensity = gunIntensity;
+            gunLight.pointLightOuterRadius = 15f;
+            gunLight.falloffIntensity = gunFalloff;
+            gunLight.color = Color.white;
+        }
     }
 }
