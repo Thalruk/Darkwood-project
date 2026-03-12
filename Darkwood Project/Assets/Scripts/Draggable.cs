@@ -2,12 +2,13 @@ using UnityEngine;
 
 public class Draggable : MonoBehaviour, IInteractable
 {
-    private FixedJoint2D joint;
     private Rigidbody2D rb;
+    private Collider2D myCollider;
 
     private void Awake()
     {
         rb = GetComponent<Rigidbody2D>();
+        myCollider = GetComponent<Collider2D>();
     }
 
     public void OnShortInteract()
@@ -17,25 +18,23 @@ public class Draggable : MonoBehaviour, IInteractable
 
     public void OnLongInteract(PlayerController player)
     {
-        if (joint == null)
+        Collider2D playerCollider = player.GetComponent<Collider2D>();
+        if (playerCollider != null && myCollider != null)
         {
-            joint = gameObject.AddComponent<FixedJoint2D>();
-            joint.connectedBody = player.GetComponent<Rigidbody2D>();
-
-            joint.dampingRatio = 1f;
-            joint.frequency = 0f;
-
-            player.SetDragging(true);
+            Physics2D.IgnoreCollision(playerCollider, myCollider, true);
         }
+
+        player.SetDragging(true);
     }
 
     public void OnRelease(PlayerController player)
     {
-        if (joint != null)
+        Collider2D playerCollider = player.GetComponent<Collider2D>();
+        if (playerCollider != null && myCollider != null)
         {
-            Destroy(joint);
-            player.SetDragging(false);
+            Physics2D.IgnoreCollision(playerCollider, myCollider, false);
         }
 
+        player.SetDragging(false);
     }
 }

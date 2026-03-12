@@ -26,6 +26,9 @@ public class PlayerController : MonoBehaviour
     [Range(0.1f, 5f)]
     [SerializeField] float interactRange = 1f;
     [SerializeField] KeyCode interactKey = KeyCode.E;
+    Vector2 dragOffset;
+    Rigidbody2D draggedRb;
+    float dragAngleOffset;
 
     float holdTimer = 0f;
     [SerializeField] float holdThreshold = 0.25f;
@@ -93,8 +96,15 @@ public class PlayerController : MonoBehaviour
     {
         if (Input.GetKeyDown(interactKey) && activeDraggable != null)
         {
+            if (draggedRb != null)
+            {
+                draggedRb.velocity = Vector2.zero;
+                draggedRb.angularVelocity = 0f;
+            }
+
             activeDraggable.OnRelease(this);
             activeDraggable = null;
+            draggedRb = null;
             isCounting = false;
             return;
         }
@@ -120,7 +130,14 @@ public class PlayerController : MonoBehaviour
                     foreach (var inter in detectedInteractables)
                     {
                         inter.OnLongInteract(this);
-                        if (inter is Draggable) activeDraggable = inter;
+                        if (inter is Draggable)
+                        {
+                            activeDraggable = inter;
+                            draggedRb = ((MonoBehaviour)activeDraggable).GetComponent<Rigidbody2D>();
+
+                            dragOffset = transform.InverseTransformPoint(draggedRb.position);
+                            dragAngleOffset = Mathf.DeltaAngle(rb.rotation, draggedRb.rotation);
+                        }
                     }
                 }
                 isCounting = false;
@@ -153,7 +170,7 @@ public class PlayerController : MonoBehaviour
         if (flashlight != null)
         {
             float targetOuterAngle = isAiming ? aimAngle : normalAngle;
-            float targetInnerAngle = Mathf.Max(0f, targetOuterAngle - 15f);
+            float targetInnerAngle = Mathf.Max(0f, targetOuterAngle);
 
             flashlight.pointLightInnerAngle = Mathf.Lerp(flashlight.pointLightInnerAngle, targetInnerAngle, Time.deltaTime * lightLerpSpeed);
             flashlight.pointLightOuterAngle = Mathf.Lerp(flashlight.pointLightOuterAngle, targetOuterAngle, Time.deltaTime * lightLerpSpeed);
@@ -172,35 +189,55 @@ public class PlayerController : MonoBehaviour
     #endregion Update
     private void FixedUpdate()
     {
-        float currentSpeed = isAiming ? aimSpeed : speed;
-        if (isDragging) currentSpeed *= dragSpeedModifier;
-        rb.MovePosition(rb.position + currentSpeed * Time.fixedDeltaTime * movementDirection);
-    }
-
-    #region LateUpdate
-    private void LateUpdate()
-    {
-        LookAtMouse();
-    }
-
-
-    void LookAtMouse()
-    {
         lookDir = mousePosition - rb.position;
         float targetAngle = Mathf.Atan2(lookDir.y, lookDir.x) * Mathf.Rad2Deg - 90f;
 
-        if (activeDraggable != null)
+        if (isDragging)
         {
-            float lerpedAngle = Mathf.MoveTowardsAngle(rb.rotation, targetAngle, dragRotationSpeed * Time.deltaTime);
-            rb.MoveRotation(lerpedAngle);
+            float lerpedAngle = Mathf.MoveTowardsAngle(rb.rotation, targetAngle, dragRotationSpeed * Time.fixedDeltaTime);
+            rb.rotation = lerpedAngle;
         }
         else
         {
             rb.rotation = targetAngle;
         }
-    }
-    #endregion LateUpdate   
 
+        float currentSpeed = isAiming ? aimSpeed : speed;
+        if (isDragging) currentSpeed *= dragSpeedModifier;
+
+        Vector2 targetVelocity = movementDirection * currentSpeed;
+        float springStiffness = 15f;
+
+        if (isDragging && draggedRb != null)
+        {
+            Vector2 targetItemPos = transform.TransformPoint(dragOffset);
+            Vector2 errorVector = targetItemPos - draggedRb.position;
+            draggedRb.velocity = errorVector * springStiffness;
+
+            float expectedDist = dragOffset.magnitude;
+            float currentDist = Vector2.Distance(rb.position, draggedRb.position);
+            float distError = currentDist - expectedDist;
+
+            if (Mathf.Abs(distError) > 0.05f && movementDirection.sqrMagnitude > 0.01f)
+            {
+                Vector2 dirToItem = (draggedRb.position - rb.position).normalized;
+
+                Vector2 playerCorrection = dirToItem * distError * springStiffness;
+                Vector2 moveDirNorm = movementDirection.normalized;
+
+                float pullForce = Vector2.Dot(playerCorrection, moveDirNorm);
+
+                if (pullForce < 0)
+                {
+                    targetVelocity += moveDirNorm * pullForce;
+                }
+            }
+            float targetObjAngle = rb.rotation + dragAngleOffset;
+            float angleError = Mathf.DeltaAngle(draggedRb.rotation, targetObjAngle);
+            draggedRb.angularVelocity = angleError * springStiffness;
+        }
+        rb.velocity = targetVelocity;
+    }
     public void SetDragging(bool dragging)
     {
         isDragging = dragging;
