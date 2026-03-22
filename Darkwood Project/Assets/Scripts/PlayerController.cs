@@ -1,59 +1,26 @@
 using UnityEngine;
-using UnityEngine.Rendering.Universal;
 
+[RequireComponent(typeof(PlayerMovement))]
+[RequireComponent(typeof(PlayerCombat))]
 public class PlayerController : MonoBehaviour
 {
     public static PlayerController Instance { get; private set; }
 
-    [Header("Movement")]
-    [SerializeField] float speed = 5f;
-    [SerializeField] float aimSpeed = 2f;
-    [SerializeField] float dragRotationSpeed = 150f;
-    [SerializeField] float dragSpeedModifier = 0.5f;
+    private PlayerMovement movement;
+    private PlayerCombat combat;
 
-    [Header("Flashlight")]
-    [SerializeField] Light2D flashlight;
-    [SerializeField] float normalAngle = 70f;
-    [SerializeField] float aimAngle = 30f;
-    [SerializeField] float lightLerpSpeed = 8f;
-
-    [Header("Gun")]
-    [SerializeField] Light2D gunLight;
-    [SerializeField] float flashFadeSpeed = 50f;
-    [SerializeField] float gunFalloff = 0.75f;
-    [SerializeField] float gunIntensity = 1;
-
-    [Header("Interaction")]
+    [Header("Interaction Settings")]
     [SerializeField] LayerMask interactableMask;
     [Range(0.1f, 5f)]
     [SerializeField] float interactRange = 1f;
     [SerializeField] KeyCode interactKey = KeyCode.E;
-    Vector2 dragOffset;
-    Rigidbody2D draggedRb;
-    float dragAngleOffset;
-    GameObject hoveredObject;
-
-    float holdTimer = 0f;
     [SerializeField] float holdThreshold = 0.25f;
-    IInteractable[] detectedInteractables;
-    bool isCounting = false;
 
-    float vertical;
-    float horizontal;
-    Vector2 movementDirection;
-    Vector2 mousePosition;
-    Rigidbody2D rb;
-    Camera cam;
-
-    Vector2 lookDir;
-    bool isAiming = false;
-    bool isDragging = false;
-
-    void Start()
-    {
-        rb = GetComponent<Rigidbody2D>();
-        cam = Camera.main;
-    }
+    private GameObject hoveredObject;
+    private float holdTimer = 0f;
+    private IInteractable[] detectedInteractables;
+    private bool isCounting = false;
+    private IInteractable activeDraggable;
 
     private void Awake()
     {
@@ -63,89 +30,51 @@ public class PlayerController : MonoBehaviour
             return;
         }
         Instance = this;
+
+        movement = GetComponent<PlayerMovement>();
+        combat = GetComponent<PlayerCombat>();
     }
 
-    #region Update
-    void Update()
+    private void Update()
     {
-        HandleInput();
+        movement.HandleInput();
 
-        HandleCombatLogic();
+        combat.HandleCombatLogic(movement.IsAiming);
 
         CheckHover();
-
         HandleInteractable();
 
-        UpdateVisuals();
+        combat.UpdateVisuals(movement.IsAiming);
     }
 
-    void HandleInput()
-    {
-        isAiming = Input.GetButton("Fire2");
-
-        vertical = Input.GetAxisRaw("Vertical");
-        horizontal = Input.GetAxisRaw("Horizontal");
-        movementDirection = new Vector2(horizontal, vertical).normalized;
-
-        Vector3 mousePos = Input.mousePosition;
-        if (mousePos.x >= 0 && mousePos.x <= Screen.width && mousePos.y >= 0 && mousePos.y <= Screen.height)
-        {
-            Vector3 mouseScreen = mousePos;
-            mouseScreen.z = 10f;
-            mousePosition = cam.ScreenToWorldPoint(mouseScreen);
-        }
-    }
-    void HandleCombatLogic()
-    {
-        if (Input.GetButtonDown("Fire1") && isAiming)
-        {
-            if (flashlight != null && Mathf.Abs(flashlight.pointLightOuterAngle - aimAngle) < 1f)
-            {
-                Shoot();
-            }
-        }
-    }
-
-    IInteractable activeDraggable;
     void CheckHover()
     {
-        if (isDragging)
+        if (movement.IsDraggingObject())
         {
             hoveredObject = null;
             return;
         }
 
-        RaycastHit2D hit = Physics2D.Raycast(transform.position, lookDir.normalized, interactRange, interactableMask);
+        RaycastHit2D hit = Physics2D.Raycast(transform.position, movement.LookDir.normalized, interactRange, interactableMask);
 
-        if (hit.collider != null)
-        {
-            hoveredObject = hit.collider.gameObject;
-        }
-        else
-        {
-            hoveredObject = null;
-        }
+        if (hit.collider != null) hoveredObject = hit.collider.gameObject;
+        else hoveredObject = null;
     }
+
     void HandleInteractable()
     {
         if (Input.GetKeyDown(interactKey) && activeDraggable != null)
         {
-            if (draggedRb != null)
-            {
-                draggedRb.velocity = Vector2.zero;
-                draggedRb.angularVelocity = 0f;
-            }
-
+            movement.StopDragging();
             activeDraggable.OnRelease(this);
             activeDraggable = null;
-            draggedRb = null;
             isCounting = false;
             return;
         }
 
         if (Input.GetKeyDown(interactKey) && activeDraggable == null)
         {
-            RaycastHit2D hit = Physics2D.Raycast(transform.position, lookDir.normalized, interactRange, interactableMask);
+            RaycastHit2D hit = Physics2D.Raycast(transform.position, movement.LookDir.normalized, interactRange, interactableMask);
             if (hit.collider != null)
             {
                 detectedInteractables = hit.collider.GetComponents<IInteractable>();
@@ -184,10 +113,8 @@ public class PlayerController : MonoBehaviour
                         if (inter is Draggable)
                         {
                             activeDraggable = inter;
-                            draggedRb = ((MonoBehaviour)activeDraggable).GetComponent<Rigidbody2D>();
-
-                            dragOffset = transform.InverseTransformPoint(draggedRb.position);
-                            dragAngleOffset = Mathf.DeltaAngle(rb.rotation, draggedRb.rotation);
+                            Rigidbody2D itemRb = ((MonoBehaviour)activeDraggable).GetComponent<Rigidbody2D>();
+                            movement.StartDragging(itemRb);
                         }
                     }
                 }
@@ -196,92 +123,9 @@ public class PlayerController : MonoBehaviour
         }
     }
 
-    void Shoot()
-    {
-        if (gunLight != null)
-        {
-            gunLight.enabled = true;
-            gunLight.intensity = gunIntensity;
-            gunLight.pointLightOuterRadius = 15f;
-            gunLight.falloffIntensity = gunFalloff;
-        }
-    }
-    void UpdateVisuals()
-    {
-        if (flashlight != null)
-        {
-            float targetOuterAngle = isAiming ? aimAngle : normalAngle;
-            float targetInnerAngle = Mathf.Max(0f, targetOuterAngle);
-
-            flashlight.pointLightInnerAngle = Mathf.Lerp(flashlight.pointLightInnerAngle, targetInnerAngle, Time.deltaTime * lightLerpSpeed);
-            flashlight.pointLightOuterAngle = Mathf.Lerp(flashlight.pointLightOuterAngle, targetOuterAngle, Time.deltaTime * lightLerpSpeed);
-        }
-
-        if (gunLight != null && gunLight.intensity > 0)
-        {
-            gunLight.intensity -= flashFadeSpeed * Time.deltaTime;
-            if (gunLight.intensity < 0.01f)
-            {
-                gunLight.intensity = 0f;
-                gunLight.enabled = false;
-            }
-        }
-    }
-    #endregion Update
-    private void FixedUpdate()
-    {
-        lookDir = mousePosition - rb.position;
-        float targetAngle = Mathf.Atan2(lookDir.y, lookDir.x) * Mathf.Rad2Deg - 90f;
-
-        if (isDragging)
-        {
-            float lerpedAngle = Mathf.MoveTowardsAngle(rb.rotation, targetAngle, dragRotationSpeed * Time.fixedDeltaTime);
-            rb.rotation = lerpedAngle;
-        }
-        else
-        {
-            rb.rotation = targetAngle;
-        }
-
-        float currentSpeed = isAiming ? aimSpeed : speed;
-        if (isDragging) currentSpeed *= dragSpeedModifier;
-
-        Vector2 targetVelocity = movementDirection * currentSpeed;
-        float springStiffness = 15f;
-
-        if (isDragging && draggedRb != null)
-        {
-            Vector2 targetItemPos = transform.TransformPoint(dragOffset);
-            Vector2 errorVector = targetItemPos - draggedRb.position;
-            draggedRb.velocity = errorVector * springStiffness;
-
-            float expectedDist = dragOffset.magnitude;
-            float currentDist = Vector2.Distance(rb.position, draggedRb.position);
-            float distError = currentDist - expectedDist;
-
-            if (Mathf.Abs(distError) > 0.05f && movementDirection.sqrMagnitude > 0.01f)
-            {
-                Vector2 dirToItem = (draggedRb.position - rb.position).normalized;
-
-                Vector2 playerCorrection = dirToItem * distError * springStiffness;
-                Vector2 moveDirNorm = movementDirection.normalized;
-
-                float pullForce = Vector2.Dot(playerCorrection, moveDirNorm);
-
-                if (pullForce < 0)
-                {
-                    targetVelocity += moveDirNorm * pullForce;
-                }
-            }
-            float targetObjAngle = rb.rotation + dragAngleOffset;
-            float angleError = Mathf.DeltaAngle(draggedRb.rotation, targetObjAngle);
-            draggedRb.angularVelocity = angleError * springStiffness;
-        }
-        rb.velocity = targetVelocity;
-    }
     public void SetDragging(bool dragging)
     {
-        isDragging = dragging;
+        if (!dragging) movement.StopDragging();
     }
 
     public float GetHoldProgress()
@@ -292,20 +136,18 @@ public class PlayerController : MonoBehaviour
 
     public string GetLookingAtObjectName()
     {
-        if (hoveredObject != null)
-        {
-            return hoveredObject.name;
-        }
+        if (hoveredObject != null) return hoveredObject.name;
         return null;
     }
 
-    public bool IsDraggingObject()
-    {
-        return isDragging;
-    }
+    public bool IsDraggingObject() => movement.IsDraggingObject();
+
     private void OnDrawGizmos()
     {
-        Gizmos.color = Color.red;
-        Gizmos.DrawLine(transform.position, transform.position + (Vector3)(lookDir.normalized * interactRange));
+        if (movement != null)
+        {
+            Gizmos.color = Color.red;
+            Gizmos.DrawLine(transform.position, transform.position + (Vector3)(movement.LookDir.normalized * interactRange));
+        }
     }
 }
