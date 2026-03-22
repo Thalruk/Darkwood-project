@@ -3,6 +3,8 @@ using UnityEngine.Rendering.Universal;
 
 public class PlayerController : MonoBehaviour
 {
+    public static PlayerController Instance { get; private set; }
+
     [Header("Movement")]
     [SerializeField] float speed = 5f;
     [SerializeField] float aimSpeed = 2f;
@@ -29,6 +31,7 @@ public class PlayerController : MonoBehaviour
     Vector2 dragOffset;
     Rigidbody2D draggedRb;
     float dragAngleOffset;
+    GameObject hoveredObject;
 
     float holdTimer = 0f;
     [SerializeField] float holdThreshold = 0.25f;
@@ -51,12 +54,25 @@ public class PlayerController : MonoBehaviour
         rb = GetComponent<Rigidbody2D>();
         cam = Camera.main;
     }
+
+    private void Awake()
+    {
+        if (Instance != null && Instance != this)
+        {
+            Destroy(gameObject);
+            return;
+        }
+        Instance = this;
+    }
+
     #region Update
     void Update()
     {
         HandleInput();
 
         HandleCombatLogic();
+
+        CheckHover();
 
         HandleInteractable();
 
@@ -91,7 +107,25 @@ public class PlayerController : MonoBehaviour
     }
 
     IInteractable activeDraggable;
+    void CheckHover()
+    {
+        if (isDragging)
+        {
+            hoveredObject = null;
+            return;
+        }
 
+        RaycastHit2D hit = Physics2D.Raycast(transform.position, lookDir.normalized, interactRange, interactableMask);
+
+        if (hit.collider != null)
+        {
+            hoveredObject = hit.collider.gameObject;
+        }
+        else
+        {
+            hoveredObject = null;
+        }
+    }
     void HandleInteractable()
     {
         if (Input.GetKeyDown(interactKey) && activeDraggable != null)
@@ -122,6 +156,23 @@ public class PlayerController : MonoBehaviour
 
         if (isCounting && Input.GetKey(interactKey))
         {
+            bool isLookingAway = true;
+            if (hoveredObject != null && detectedInteractables != null && detectedInteractables.Length > 0)
+            {
+                if (hoveredObject == ((MonoBehaviour)detectedInteractables[0]).gameObject)
+                {
+                    isLookingAway = false;
+                }
+            }
+
+            if (isLookingAway)
+            {
+                isCounting = false;
+                detectedInteractables = null;
+                holdTimer = 0f;
+                return;
+            }
+
             holdTimer += Time.deltaTime;
             if (holdTimer >= holdThreshold)
             {
@@ -142,16 +193,6 @@ public class PlayerController : MonoBehaviour
                 }
                 isCounting = false;
             }
-        }
-
-        if (Input.GetKeyUp(interactKey) && isCounting)
-        {
-            if (detectedInteractables != null)
-            {
-                foreach (var inter in detectedInteractables) inter.OnShortInteract();
-            }
-            isCounting = false;
-            detectedInteractables = null;
         }
     }
 
@@ -243,6 +284,25 @@ public class PlayerController : MonoBehaviour
         isDragging = dragging;
     }
 
+    public float GetHoldProgress()
+    {
+        if (!isCounting || holdThreshold <= 0) return 0f;
+        return Mathf.Clamp01(holdTimer / holdThreshold);
+    }
+
+    public string GetLookingAtObjectName()
+    {
+        if (hoveredObject != null)
+        {
+            return hoveredObject.name;
+        }
+        return null;
+    }
+
+    public bool IsDraggingObject()
+    {
+        return isDragging;
+    }
     private void OnDrawGizmos()
     {
         Gizmos.color = Color.red;
