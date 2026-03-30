@@ -18,12 +18,10 @@ public class PlayerMovement : MonoBehaviour
     private Vector2 movementDirection;
     private Vector2 mousePosition;
 
-    // --- Stan Dragowania ---
     private bool isDragging = false;
     private Rigidbody2D draggedRb;
     private FixedJoint2D grabJoint;
 
-    // Zapamiêtany k¹t z momentu z³apania
     private float lockedAngle;
 
     private void Awake()
@@ -59,16 +57,13 @@ public class PlayerMovement : MonoBehaviour
 
         if (!isDragging)
         {
-            // Swobodne celowanie myszk¹, gdy idziemy bez mebla
             rb.rotation = targetAngle;
         }
         else
         {
-            // Twarda blokada obrotu. Ignorujemy myszkê i ignorujemy fizykê uderzeñ szafy.
             rb.rotation = lockedAngle;
         }
 
-        // Zawsze zerujemy pêd obrotowy, ¿eby wy³¹czyæ jakiekolwiek drgania rotacyjne z kolizji
         rb.angularVelocity = 0f;
 
         float currentSpeed = IsAiming ? aimSpeed : speed;
@@ -83,10 +78,8 @@ public class PlayerMovement : MonoBehaviour
         isDragging = true;
         draggedRb = itemRb;
 
-        // Robimy zdjêcie aktualnego k¹ta postaci
         lockedAngle = rb.rotation;
 
-        // Spawamy na sztywno
         grabJoint = gameObject.AddComponent<FixedJoint2D>();
         grabJoint.connectedBody = draggedRb;
     }

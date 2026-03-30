@@ -1,3 +1,4 @@
+using Cinemachine;
 using UnityEngine;
 using UnityEngine.Rendering.Universal;
 
@@ -14,6 +15,9 @@ public class PlayerCombat : MonoBehaviour
     [SerializeField] float flashFadeSpeed = 50f;
     [SerializeField] float gunFalloff = 0.75f;
     [SerializeField] float gunIntensity = 1;
+
+    [Header("Camera Shake")]
+    [SerializeField] CinemachineImpulseSource impulseSource;
 
     public void HandleCombatLogic(bool isAiming)
     {
@@ -34,6 +38,11 @@ public class PlayerCombat : MonoBehaviour
             gunLight.intensity = gunIntensity;
             gunLight.pointLightOuterRadius = 15f;
             gunLight.falloffIntensity = gunFalloff;
+        }
+
+        if (impulseSource != null)
+        {
+            impulseSource.GenerateImpulseWithVelocity(-transform.up * 0.2f);
         }
     }
 

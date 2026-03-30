@@ -18,13 +18,11 @@ public class Draggable : MonoBehaviour, IInteractable
 
     public void OnLongInteract(PlayerController player)
     {
-        // Zero wy³¹czania kolizji. Tylko czysty sygna³ do kontrolera.
         player.SetDragging(true);
     }
 
     public void OnRelease(PlayerController player)
     {
-        // Czysty sygna³ o puszczeniu mebla.
         player.SetDragging(false);
     }
 }
