@@ -6,7 +6,6 @@ public class PlayerMovement : MonoBehaviour
     [Header("Movement Settings")]
     [SerializeField] float speed = 5f;
     [SerializeField] float aimSpeed = 2f;
-    [SerializeField] float dragRotationSpeed = 35f;
     [SerializeField] float dragSpeedModifier = 0.5f;
 
     public bool IsAiming { get; private set; }
@@ -22,8 +21,10 @@ public class PlayerMovement : MonoBehaviour
     // --- Stan Dragowania ---
     private bool isDragging = false;
     private Rigidbody2D draggedRb;
-    private Vector2 dragOffset;
-    private float dragAngleOffset;
+    private FixedJoint2D grabJoint;
+
+    // Zapamiêtany k¹t z momentu z³apania
+    private float lockedAngle;
 
     private void Awake()
     {
@@ -44,7 +45,10 @@ public class PlayerMovement : MonoBehaviour
         {
             Vector3 mouseScreen = mousePos;
             mouseScreen.z = 10f;
-            mousePosition = cam.ScreenToWorldPoint(mouseScreen);
+            if (cam != null)
+            {
+                mousePosition = cam.ScreenToWorldPoint(mouseScreen);
+            }
         }
     }
 
@@ -53,47 +57,24 @@ public class PlayerMovement : MonoBehaviour
         LookDir = mousePosition - rb.position;
         float targetAngle = Mathf.Atan2(LookDir.y, LookDir.x) * Mathf.Rad2Deg - 90f;
 
-        if (isDragging)
+        if (!isDragging)
         {
-            float lerpedAngle = Mathf.MoveTowardsAngle(rb.rotation, targetAngle, dragRotationSpeed * Time.fixedDeltaTime);
-            rb.rotation = lerpedAngle;
+            // Swobodne celowanie myszk¹, gdy idziemy bez mebla
+            rb.rotation = targetAngle;
         }
         else
         {
-            rb.rotation = targetAngle;
+            // Twarda blokada obrotu. Ignorujemy myszkê i ignorujemy fizykê uderzeñ szafy.
+            rb.rotation = lockedAngle;
         }
+
+        // Zawsze zerujemy pêd obrotowy, ¿eby wy³¹czyæ jakiekolwiek drgania rotacyjne z kolizji
+        rb.angularVelocity = 0f;
 
         float currentSpeed = IsAiming ? aimSpeed : speed;
         if (isDragging) currentSpeed *= dragSpeedModifier;
 
         Vector2 targetVelocity = movementDirection * currentSpeed;
-        float springStiffness = 15f;
-
-        if (isDragging && draggedRb != null)
-        {
-            Vector2 targetItemPos = transform.TransformPoint(dragOffset);
-            Vector2 errorVector = targetItemPos - draggedRb.position;
-            draggedRb.velocity = errorVector * springStiffness;
-
-            float expectedDist = dragOffset.magnitude;
-            float currentDist = Vector2.Distance(rb.position, draggedRb.position);
-            float distError = currentDist - expectedDist;
-
-            if (Mathf.Abs(distError) > 0.05f && movementDirection.sqrMagnitude > 0.01f)
-            {
-                Vector2 dirToItem = (draggedRb.position - rb.position).normalized;
-                Vector2 playerCorrection = dirToItem * distError * springStiffness;
-                Vector2 moveDirNorm = movementDirection.normalized;
-
-                float pullForce = Vector2.Dot(playerCorrection, moveDirNorm);
-                if (pullForce < 0) targetVelocity += moveDirNorm * pullForce;
-            }
-
-            float targetObjAngle = rb.rotation + dragAngleOffset;
-            float angleError = Mathf.DeltaAngle(draggedRb.rotation, targetObjAngle);
-            draggedRb.angularVelocity = angleError * springStiffness;
-        }
-
         rb.velocity = targetVelocity;
     }
 
@@ -101,19 +82,30 @@ public class PlayerMovement : MonoBehaviour
     {
         isDragging = true;
         draggedRb = itemRb;
-        dragOffset = transform.InverseTransformPoint(draggedRb.position);
-        dragAngleOffset = Mathf.DeltaAngle(rb.rotation, draggedRb.rotation);
+
+        // Robimy zdjêcie aktualnego k¹ta postaci
+        lockedAngle = rb.rotation;
+
+        // Spawamy na sztywno
+        grabJoint = gameObject.AddComponent<FixedJoint2D>();
+        grabJoint.connectedBody = draggedRb;
     }
 
     public void StopDragging()
     {
+        isDragging = false;
+
         if (draggedRb != null)
         {
             draggedRb.velocity = Vector2.zero;
             draggedRb.angularVelocity = 0f;
+            draggedRb = null;
         }
-        isDragging = false;
-        draggedRb = null;
+
+        if (grabJoint != null)
+        {
+            Destroy(grabJoint);
+        }
     }
 
     public bool IsDraggingObject() => isDragging;

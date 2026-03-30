@@ -18,23 +18,13 @@ public class Draggable : MonoBehaviour, IInteractable
 
     public void OnLongInteract(PlayerController player)
     {
-        Collider2D playerCollider = player.GetComponent<Collider2D>();
-        if (playerCollider != null && myCollider != null)
-        {
-            Physics2D.IgnoreCollision(playerCollider, myCollider, true);
-        }
-
+        // Zero wy³¹czania kolizji. Tylko czysty sygna³ do kontrolera.
         player.SetDragging(true);
     }
 
     public void OnRelease(PlayerController player)
     {
-        Collider2D playerCollider = player.GetComponent<Collider2D>();
-        if (playerCollider != null && myCollider != null)
-        {
-            Physics2D.IgnoreCollision(playerCollider, myCollider, false);
-        }
-
+        // Czysty sygna³ o puszczeniu mebla.
         player.SetDragging(false);
     }
 }

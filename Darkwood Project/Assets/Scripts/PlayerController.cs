@@ -103,6 +103,7 @@ public class PlayerController : MonoBehaviour
             }
 
             holdTimer += Time.deltaTime;
+
             if (holdTimer >= holdThreshold)
             {
                 if (detectedInteractables != null)
@@ -120,6 +121,21 @@ public class PlayerController : MonoBehaviour
                 }
                 isCounting = false;
             }
+        }
+
+        if (isCounting && Input.GetKeyUp(interactKey))
+        {
+            if (holdTimer < holdThreshold && detectedInteractables != null)
+            {
+                foreach (var inter in detectedInteractables)
+                {
+                    inter.OnShortInteract();
+                }
+            }
+
+            isCounting = false;
+            detectedInteractables = null;
+            holdTimer = 0f;
         }
     }
 
