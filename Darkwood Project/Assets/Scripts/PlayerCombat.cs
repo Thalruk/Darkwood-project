@@ -16,6 +16,12 @@ public class PlayerCombat : MonoBehaviour
     [SerializeField] float gunFalloff = 0.75f;
     [SerializeField] float gunIntensity = 1;
 
+    [Header("Shooting Setup")]
+    [SerializeField] Transform firePoint;
+    [SerializeField] float weaponRange = 25f;
+    [SerializeField] LayerMask hitLayers;
+    [SerializeField] float recoilForce;
+
     [Header("Camera Shake")]
     [SerializeField] CinemachineImpulseSource impulseSource;
 
@@ -42,7 +48,23 @@ public class PlayerCombat : MonoBehaviour
 
         if (impulseSource != null)
         {
-            impulseSource.GenerateImpulseWithVelocity(-transform.up * 0.2f);
+            impulseSource.GenerateImpulseWithVelocity(-transform.up * recoilForce);
+        }
+
+        Vector2 startPos = firePoint != null ? (Vector2)firePoint.position : (Vector2)transform.position;
+        Vector2 direction = transform.up;
+
+        RaycastHit2D hit = Physics2D.Raycast(startPos, direction, weaponRange, hitLayers);
+
+        if (hit.collider != null)
+        {
+            Debug.Log($"Hit: {hit.collider.name}");
+
+            Debug.DrawLine(startPos, hit.point, Color.red, 2f);
+        }
+        else
+        {
+            Debug.DrawLine(startPos, startPos + (direction * weaponRange), Color.gray, 2f);
         }
     }
 
