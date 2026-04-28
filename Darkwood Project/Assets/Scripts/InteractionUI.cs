@@ -13,9 +13,12 @@ public class InteractionUI : MonoBehaviour
     [SerializeField] private TextMeshProUGUI mainText;
     [SerializeField] private Slider dragSlider;
 
+    private IInteractable myInteractable;
+
     void Start()
     {
         player = PlayerController.Instance;
+        myInteractable = GetComponent<IInteractable>();
 
         if (dragSlider != null)
         {
@@ -26,9 +29,11 @@ public class InteractionUI : MonoBehaviour
 
     void Update()
     {
-        string targetName = player.GetLookingAtObjectName();
+        bool isHovered = (player.GetHoveredObject() == gameObject);
 
-        if (!player.IsDraggingObject() && string.IsNullOrEmpty(targetName))
+        bool isBeingDragged = (player.GetActiveDraggable() == myInteractable);
+
+        if (!isHovered && !isBeingDragged)
         {
             uiContainer.SetActive(false);
             return;
@@ -36,10 +41,10 @@ public class InteractionUI : MonoBehaviour
 
         uiContainer.SetActive(true);
 
-        if (player.IsDraggingObject())
+        if (isBeingDragged)
         {
             mainText.text = "[E] stop";
-            dragSlider.gameObject.SetActive(false);
+            if (dragSlider != null) dragSlider.gameObject.SetActive(false);
             return;
         }
 
@@ -48,14 +53,16 @@ public class InteractionUI : MonoBehaviour
         if (progress > 0.15f)
         {
             mainText.text = "[E] ";
-            dragSlider.gameObject.SetActive(true);
-
-            dragSlider.value = (progress - 0.15f) / 0.85f;
+            if (dragSlider != null)
+            {
+                dragSlider.gameObject.SetActive(true);
+                dragSlider.value = (progress - 0.15f) / 0.85f;
+            }
         }
         else
         {
             mainText.text = "[E] light";
-            dragSlider.gameObject.SetActive(false);
+            if (dragSlider != null) dragSlider.gameObject.SetActive(false);
         }
     }
 }

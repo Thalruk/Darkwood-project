@@ -38,15 +38,15 @@ public class PlayerController : MonoBehaviour
     private void Update()
     {
         movement.HandleInput();
-
         combat.HandleCombatLogic(movement.IsAiming);
 
         CheckHover();
         HandleInteractable();
 
+        CheckPanicDrop();
+
         combat.UpdateVisuals(movement.IsAiming);
     }
-
     void CheckHover()
     {
         if (movement.IsDraggingObject())
@@ -139,6 +139,27 @@ public class PlayerController : MonoBehaviour
         }
     }
 
+    private void CheckPanicDrop()
+    {
+        if (!IsDraggingObject() || activeDraggable == null) return;
+
+        Enemy[] enemies = FindObjectsOfType<Enemy>();
+
+        foreach (Enemy enemy in enemies)
+        {
+            if (Vector2.Distance(transform.position, enemy.transform.position) < 1.5f)
+            {
+                Debug.Log("Wróg za blisko! Panika! Upuszczam barykadê!");
+
+                movement.StopDragging();
+                activeDraggable.OnRelease(this);
+                activeDraggable = null;
+                isCounting = false;
+                break;
+            }
+        }
+    }
+
     public void SetDragging(bool dragging)
     {
         if (!dragging) movement.StopDragging();
@@ -155,7 +176,15 @@ public class PlayerController : MonoBehaviour
         if (hoveredObject != null) return hoveredObject.name;
         return null;
     }
+    public GameObject GetHoveredObject()
+    {
+        return hoveredObject;
+    }
 
+    public IInteractable GetActiveDraggable()
+    {
+        return activeDraggable;
+    }
     public bool IsDraggingObject() => movement.IsDraggingObject();
 
     private void OnDrawGizmos()
