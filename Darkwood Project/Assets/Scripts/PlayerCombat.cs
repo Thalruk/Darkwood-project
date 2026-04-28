@@ -1,4 +1,5 @@
 using Cinemachine;
+using System.Collections; // Wymagane do dzia³ania korutyny prze³adowania
 using UnityEngine;
 using UnityEngine.Rendering.Universal;
 
@@ -11,6 +12,16 @@ public class PlayerCombat : MonoBehaviour
     [SerializeField] float lightLerpSpeed = 8f;
 
     [Header("Gun")]
+    [SerializeField] int ammoInClip = 6;
+    [SerializeField] int maxAmmo = 24;
+    [SerializeField] float reloadTime = 1.5f;
+    [SerializeField] float fireRate = 0.5f;
+    [SerializeField] float damage = 1;
+    [SerializeField] AudioClip shootSound;
+    [SerializeField] AudioClip reloadSound;
+    [SerializeField] AudioSource audioSource;
+
+    [Header("Gun light")]
     [SerializeField] Light2D gunLight;
     [SerializeField] float flashFadeSpeed = 50f;
     [SerializeField] float gunFalloff = 0.75f;
@@ -25,19 +36,43 @@ public class PlayerCombat : MonoBehaviour
     [Header("Camera Shake")]
     [SerializeField] CinemachineImpulseSource impulseSource;
 
+    private float nextFireTime = 0f;
+    private bool isReloading = false;
+
     public void HandleCombatLogic(bool isAiming)
     {
-        if (Input.GetButtonDown("Fire1") && isAiming)
+        if (Input.GetKeyDown(KeyCode.R) && ammoInClip < 6 && maxAmmo > 0 && !isReloading)
+        {
+            StartCoroutine(ReloadRoutine());
+            return;
+        }
+
+        if (Input.GetButtonDown("Fire1") && isAiming && !isReloading)
         {
             if (flashlight != null && Mathf.Abs(flashlight.pointLightOuterAngle - aimAngle) < 1f)
             {
-                Shoot();
+                if (Time.time >= nextFireTime && ammoInClip > 0)
+                {
+                    Shoot();
+                }
+                else if (ammoInClip <= 0 && Time.time >= nextFireTime)
+                {
+                    nextFireTime = Time.time + 0.2f;
+                }
             }
         }
     }
 
     private void Shoot()
     {
+        ammoInClip--;
+        nextFireTime = Time.time + fireRate;
+
+        if (audioSource != null && shootSound != null)
+        {
+            audioSource.PlayOneShot(shootSound);
+        }
+
         if (gunLight != null)
         {
             gunLight.enabled = true;
@@ -58,9 +93,13 @@ public class PlayerCombat : MonoBehaviour
 
         if (hit.collider != null)
         {
-            Debug.Log($"Hit: {hit.collider.name}");
-
             Debug.DrawLine(startPos, hit.point, Color.red, 2f);
+
+            Enemy target = hit.collider.GetComponent<Enemy>();
+            if (target != null)
+            {
+                target.TakeDamage((int)damage);
+            }
         }
         else
         {
@@ -88,5 +127,25 @@ public class PlayerCombat : MonoBehaviour
                 gunLight.enabled = false;
             }
         }
+    }
+
+    private IEnumerator ReloadRoutine()
+    {
+        isReloading = true;
+
+        if (audioSource != null && reloadSound != null)
+        {
+            audioSource.PlayOneShot(reloadSound);
+        }
+
+        yield return new WaitForSeconds(reloadTime);
+
+        int bulletsNeeded = 6 - ammoInClip;
+        int bulletsToLoad = Mathf.Min(bulletsNeeded, maxAmmo);
+
+        ammoInClip += bulletsToLoad;
+        maxAmmo -= bulletsToLoad;
+
+        isReloading = false;
     }
 }

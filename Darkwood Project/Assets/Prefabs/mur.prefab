@@ -12,6 +12,7 @@ GameObject:
   - component: {fileID: 5689289361502186715}
   - component: {fileID: 735369567232611102}
   - component: {fileID: 4919537157122392413}
+  - component: {fileID: 9055770618805106064}
   m_Layer: 9
   m_Name: mur
   m_TagString: Untagged
@@ -112,7 +113,7 @@ MonoBehaviour:
   - {x: 2.8635566, y: -1.3100991, z: 0}
   m_ShapePathHash: -2016735624
   m_Mesh: {fileID: 0}
-  m_InstanceId: 45784
+  m_InstanceId: 38954
   m_LocalBounds:
     m_Center: {x: 0.0888958, y: 0.14917397, z: 0}
     m_Extent: {x: 2.8179617, y: 1.4592731, z: 0}
@@ -161,3 +162,19 @@ BoxCollider2D:
   serializedVersion: 2
   m_Size: {x: 5.85, y: 3.03}
   m_EdgeRadius: 0
+--- !u!114 &9055770618805106064
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4276197152753459872}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9809bf1345abc5648af68b3a82653f08, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_OverrideArea: 1
+  m_Area: 1
+  m_IgnoreFromBuild: 0
+  m_AffectedAgents: ffffffff
