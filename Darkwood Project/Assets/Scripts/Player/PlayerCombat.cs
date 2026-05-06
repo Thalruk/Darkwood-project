@@ -18,6 +18,7 @@ public class PlayerCombat : MonoBehaviour
     [SerializeField] float fireRate = 0.5f;
     [SerializeField] float damage = 1;
     [SerializeField] AudioClip shootSound;
+    [SerializeField] AudioClip emptySound;
     [SerializeField] AudioClip reloadSound;
     [SerializeField] AudioSource audioSource;
 
@@ -51,13 +52,21 @@ public class PlayerCombat : MonoBehaviour
         {
             if (flashlight != null && Mathf.Abs(flashlight.pointLightOuterAngle - aimAngle) < 1f)
             {
-                if (Time.time >= nextFireTime && ammoInClip > 0)
+                if (Time.time >= nextFireTime)
                 {
-                    Shoot();
-                }
-                else if (ammoInClip <= 0 && Time.time >= nextFireTime)
-                {
-                    nextFireTime = Time.time + 0.2f;
+                    if (ammoInClip > 0)
+                    {
+                        Shoot();
+                    }
+                    else
+                    {
+                        nextFireTime = Time.time + 0.2f;
+
+                        if (audioSource != null && emptySound != null)
+                        {
+                            audioSource.PlayOneShot(emptySound);
+                        }
+                    }
                 }
             }
         }
@@ -148,4 +157,6 @@ public class PlayerCombat : MonoBehaviour
 
         isReloading = false;
     }
+    public int GetAmmoInClip() => ammoInClip;
+    public int GetMaxAmmo() => maxAmmo;
 }

@@ -1,4 +1,3 @@
-using NavMeshPlus.Components; // Pozwala skryptowi widzieæ komponenty z wtyczki 2D
 using UnityEngine;
 
 public class Draggable : MonoBehaviour, IInteractable
@@ -26,11 +25,9 @@ public class Draggable : MonoBehaviour, IInteractable
     {
         player.SetDragging(false);
 
-        NavMeshSurface surface = FindObjectOfType<NavMeshSurface>();
-        if (surface != null)
+        if (GameManager.Instance != null)
         {
-            surface.BuildNavMesh();
-            Debug.Log("Siatka NavMesh zosta³a zaktualizowana pod now¹ barykadê!");
+            GameManager.Instance.UpdateNavMesh();
         }
     }
 }

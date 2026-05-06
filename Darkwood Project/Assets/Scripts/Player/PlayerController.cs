@@ -143,11 +143,11 @@ public class PlayerController : MonoBehaviour
     {
         if (!IsDraggingObject() || activeDraggable == null) return;
 
-        Enemy[] enemies = FindObjectsOfType<Enemy>();
+        Collider2D[] collidersInRange = Physics2D.OverlapCircleAll(transform.position, 1.5f);
 
-        foreach (Enemy enemy in enemies)
+        foreach (Collider2D col in collidersInRange)
         {
-            if (Vector2.Distance(transform.position, enemy.transform.position) < 1.5f)
+            if (col.GetComponent<Enemy>() != null)
             {
                 Debug.Log("Wróg za blisko! Panika! Upuszczam barykadê!");
 
@@ -193,6 +193,9 @@ public class PlayerController : MonoBehaviour
         {
             Gizmos.color = Color.red;
             Gizmos.DrawLine(transform.position, transform.position + (Vector3)(movement.LookDir.normalized * interactRange));
+
+            Gizmos.color = new Color(1f, 0f, 0f, 0.3f);
+            Gizmos.DrawWireSphere(transform.position, 1.5f);
         }
     }
 }

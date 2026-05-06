@@ -33,4 +33,24 @@ public class Enemy : MonoBehaviour
             Destroy(gameObject);
         }
     }
+    private float nextAttackTime = 0f;
+
+    private void OnCollisionStay2D(Collision2D collision)
+    {
+        Debug.Log("Kloc dotyka obiektu: " + collision.gameObject.name); // DODAJ TYLKO TÊ LINIJKÊ
+
+        if (Time.time >= nextAttackTime)
+        {
+            if (collision.gameObject.TryGetComponent(out PlayerHealth playerHP))
+            {
+                playerHP.TakeDamage(25);
+                nextAttackTime = Time.time + 1f;
+            }
+            if (collision.gameObject.TryGetComponent(out Destructible destructible))
+            {
+                destructible.TakeDamage(10);
+                nextAttackTime = Time.time + 1f;
+            }
+        }
+    }
 }
