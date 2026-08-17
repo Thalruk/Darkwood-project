@@ -46,11 +46,6 @@ public class Enemy : MonoBehaviour
                 playerHP.TakeDamage(25);
                 nextAttackTime = Time.time + 1f;
             }
-            if (collision.gameObject.TryGetComponent(out Destructible destructible))
-            {
-                destructible.TakeDamage(10);
-                nextAttackTime = Time.time + 1f;
-            }
         }
     }
 }
