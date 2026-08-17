@@ -1,5 +1,6 @@
 using Cinemachine;
-using System.Collections; // Wymagane do dzia³ania korutyny prze³adowania
+using System;
+using System.Collections;
 using UnityEngine;
 using UnityEngine.Rendering.Universal;
 
@@ -36,19 +37,24 @@ public class PlayerCombat : MonoBehaviour
 
     [Header("Camera Shake")]
     [SerializeField] CinemachineImpulseSource impulseSource;
-
+    public event Action<int, int> OnAmmoChanged;
     private float nextFireTime = 0f;
     private bool isReloading = false;
 
-    public void HandleCombatLogic(bool isAiming)
+
+    private void Start()
     {
-        if (Input.GetKeyDown(KeyCode.R) && ammoInClip < 6 && maxAmmo > 0 && !isReloading)
+        OnAmmoChanged?.Invoke(ammoInClip, maxAmmo);
+    }
+    public void HandleCombatLogic(bool isAiming, bool shootInput, bool reloadInput)
+    {
+        if (reloadInput && ammoInClip < 6 && maxAmmo > 0 && !isReloading)
         {
             StartCoroutine(ReloadRoutine());
             return;
         }
 
-        if (Input.GetButtonDown("Fire1") && isAiming && !isReloading)
+        if (shootInput && isAiming && !isReloading)
         {
             if (flashlight != null && Mathf.Abs(flashlight.pointLightOuterAngle - aimAngle) < 1f)
             {
@@ -75,6 +81,7 @@ public class PlayerCombat : MonoBehaviour
     private void Shoot()
     {
         ammoInClip--;
+        OnAmmoChanged?.Invoke(ammoInClip, maxAmmo);
         nextFireTime = Time.time + fireRate;
 
         if (audioSource != null && shootSound != null)
@@ -154,9 +161,10 @@ public class PlayerCombat : MonoBehaviour
 
         ammoInClip += bulletsToLoad;
         maxAmmo -= bulletsToLoad;
-
+        OnAmmoChanged?.Invoke(ammoInClip, maxAmmo);
         isReloading = false;
     }
+
     public int GetAmmoInClip() => ammoInClip;
     public int GetMaxAmmo() => maxAmmo;
 }

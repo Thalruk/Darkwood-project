@@ -12,16 +12,31 @@ public class PlayerUI : MonoBehaviour
     [SerializeField] private TextMeshProUGUI ammoText;
     [SerializeField] private Slider healthSlider;
 
-    void Update()
+    private void OnEnable()
     {
-        if (combat != null && ammoText != null)
-        {
-            ammoText.text = $"{combat.GetAmmoInClip()} / {combat.GetMaxAmmo()}";
-        }
+        if (health != null) health.OnHealthChanged += UpdateHealthUI;
+        if (combat != null) combat.OnAmmoChanged += UpdateAmmoUI;
+    }
 
-        if (health != null && healthSlider != null)
+    private void OnDisable()
+    {
+        if (health != null) health.OnHealthChanged -= UpdateHealthUI;
+        if (combat != null) combat.OnAmmoChanged -= UpdateAmmoUI;
+    }
+
+    private void UpdateHealthUI(int currentHp, int maxHp)
+    {
+        if (healthSlider != null)
         {
-            healthSlider.value = (float)health.currentHealth / health.maxHealth;
+            healthSlider.value = (float)currentHp / maxHp;
+        }
+    }
+
+    private void UpdateAmmoUI(int currentAmmo, int maxAmmoAmount)
+    {
+        if (ammoText != null)
+        {
+            ammoText.text = $"{currentAmmo} / {maxAmmoAmount}";
         }
     }
 }

@@ -22,10 +22,21 @@ public class PlayerController : MonoBehaviour
         combat = GetComponent<PlayerCombat>();
     }
 
+
     private void Update()
     {
-        movement.HandleInput();
-        combat.HandleCombatLogic(movement.IsAiming);
-        combat.UpdateVisuals(movement.IsAiming);
+        float horizontal = Input.GetAxisRaw("Horizontal");
+        float vertical = Input.GetAxisRaw("Vertical");
+        Vector2 moveInput = new Vector2(horizontal, vertical).normalized;
+
+        Vector3 mouseScreenPos = Input.mousePosition;
+
+        bool isAiming = Input.GetButton("Fire2");
+        bool isShooting = Input.GetButtonDown("Fire1");
+        bool isReloading = Input.GetKeyDown(KeyCode.R);
+
+        movement.UpdateMovementData(moveInput, mouseScreenPos, isAiming);
+        combat.HandleCombatLogic(isAiming, isShooting, isReloading);
+        combat.UpdateVisuals(isAiming);
     }
 }

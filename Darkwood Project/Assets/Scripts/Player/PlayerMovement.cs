@@ -6,23 +6,14 @@ public class PlayerMovement : MonoBehaviour
     [Header("Movement Settings")]
     [SerializeField] float speed = 5f;
     [SerializeField] float aimSpeed = 2f;
-    [SerializeField] float dragSpeedModifier = 0.5f;
-
-    public bool IsAiming { get; private set; }
     public Vector2 LookDir { get; private set; }
+    [SerializeField] float backwardsSpeedModifier = 0.5f;
 
     private Rigidbody2D rb;
     private Camera cam;
-    private float vertical;
-    private float horizontal;
-    private Vector2 movementDirection;
-    private Vector2 mousePosition;
-
-    private bool isDragging = false;
-    private Rigidbody2D draggedRb;
-    private FixedJoint2D grabJoint;
-
-    private float lockedAngle;
+    private Vector2 currentMoveInput;
+    private Vector2 currentMousePos;
+    private bool currentIsAiming;
 
     private void Awake()
     {
@@ -30,76 +21,45 @@ public class PlayerMovement : MonoBehaviour
         cam = Camera.main;
     }
 
-    public void HandleInput()
+    public void UpdateMovementData(Vector2 moveInput, Vector3 mouseScreenPos, bool isAiming)
     {
-        IsAiming = Input.GetButton("Fire2");
+        currentMoveInput = moveInput;
+        currentIsAiming = isAiming;
 
-        vertical = Input.GetAxisRaw("Vertical");
-        horizontal = Input.GetAxisRaw("Horizontal");
-        movementDirection = new Vector2(horizontal, vertical).normalized;
-
-        Vector3 mousePos = Input.mousePosition;
-        if (mousePos.x >= 0 && mousePos.x <= Screen.width && mousePos.y >= 0 && mousePos.y <= Screen.height)
+        if (mouseScreenPos.x >= 0 && mouseScreenPos.x <= Screen.width &&
+            mouseScreenPos.y >= 0 && mouseScreenPos.y <= Screen.height)
         {
-            Vector3 mouseScreen = mousePos;
-            mouseScreen.z = 10f;
+            mouseScreenPos.z = 10f;
             if (cam != null)
             {
-                mousePosition = cam.ScreenToWorldPoint(mouseScreen);
+                currentMousePos = cam.ScreenToWorldPoint(mouseScreenPos);
             }
         }
     }
 
     private void FixedUpdate()
     {
-        LookDir = mousePosition - rb.position;
+        LookDir = currentMousePos - rb.position;
+        Vector2 lookDirNormalized = LookDir.normalized;
+
         float targetAngle = Mathf.Atan2(LookDir.y, LookDir.x) * Mathf.Rad2Deg - 90f;
-
-        if (!isDragging)
-        {
-            rb.rotation = targetAngle;
-        }
-        else
-        {
-            rb.rotation = lockedAngle;
-        }
-
+        rb.rotation = targetAngle;
         rb.angularVelocity = 0f;
 
-        float currentSpeed = IsAiming ? aimSpeed : speed;
-        if (isDragging) currentSpeed *= dragSpeedModifier;
+        float currentSpeed = currentIsAiming ? aimSpeed : speed;
 
-        Vector2 targetVelocity = movementDirection * currentSpeed;
+        if (currentMoveInput.magnitude > 0)
+        {
+            float dotProduct = Vector2.Dot(currentMoveInput, lookDirNormalized);
+
+            if (dotProduct < 0)
+            {
+                float speedMultiplier = Mathf.Lerp(1f, backwardsSpeedModifier, Mathf.Abs(dotProduct));
+                currentSpeed *= speedMultiplier;
+            }
+        }
+
+        Vector2 targetVelocity = currentMoveInput * currentSpeed;
         rb.velocity = targetVelocity;
     }
-
-    public void StartDragging(Rigidbody2D itemRb)
-    {
-        isDragging = true;
-        draggedRb = itemRb;
-
-        lockedAngle = rb.rotation;
-
-        grabJoint = gameObject.AddComponent<FixedJoint2D>();
-        grabJoint.connectedBody = draggedRb;
-    }
-
-    public void StopDragging()
-    {
-        isDragging = false;
-
-        if (draggedRb != null)
-        {
-            draggedRb.velocity = Vector2.zero;
-            draggedRb.angularVelocity = 0f;
-            draggedRb = null;
-        }
-
-        if (grabJoint != null)
-        {
-            Destroy(grabJoint);
-        }
-    }
-
-    public bool IsDraggingObject() => isDragging;
 }
