@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 public class EquipmentManager : MonoBehaviour
@@ -6,6 +7,20 @@ public class EquipmentManager : MonoBehaviour
     public ItemData rightHandSlot;
     public ItemData leftHandSlot;
 
+    [Header("Armor slots")]
+    public ItemData pantsSlot;
+    public ItemData pants;
+
+    private List<InventoryGrid> activePantsGrids = new List<InventoryGrid>();
+
+    void Update()
+    {
+        if (Input.GetKeyDown(KeyCode.Space))
+        {
+            EquipPants(pants);
+            FindObjectOfType<InventoryUI>().RefreshUI();
+        }
+    }
     public bool TryEquip(ItemData item, bool toRightHand)
     {
         if (item == null) return false;
@@ -63,10 +78,36 @@ public class EquipmentManager : MonoBehaviour
         return true;
     }
 
+    public void EquipPants(ItemData pantsItem)
+    {
+        if (pantsItem == null) return;
+
+        ContainerModule container = pantsItem.GetModule<ContainerModule>();
+        if (container == null)
+        {
+            Debug.Log($"Przedmiot {pantsItem.displayName} nie posiada kieszeni.");
+            return;
+        }
+
+        pantsSlot = pantsItem;
+        activePantsGrids.Clear();
+        foreach (PocketDefinition pocket in container.pockets)
+        {
+            InventoryGrid newGrid = new InventoryGrid(pocket.width, pocket.height);
+            activePantsGrids.Add(newGrid);
+
+            Debug.Log($"Utworzono logiczną kieszeń w pamięci: {pocket.pocketName} ({pocket.width}x{pocket.height})");
+        }
+    }
     private void DropItem(ItemData item)
     {
         if (item == null) return;
 
         Debug.Log($"<color=orange>Wyrzucono na ziemię: {item.displayName}</color>");
     }
+    public List<InventoryGrid> GetActivePantsGrids()
+    {
+        return activePantsGrids;
+    }
 }
+

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 [Serializable]
 public abstract class ItemModule
@@ -23,4 +24,17 @@ public class WeaponModule : ItemModule
 public class EquippableModule : ItemModule
 {
     public bool isTwoHanded = false;
+}
+[Serializable]
+public class PocketDefinition
+{
+    public string pocketName = "Kieszeń";
+    public int width = 2;
+    public int height = 2;
+}
+
+[Serializable]
+public class ContainerModule : ItemModule
+{
+    public List<PocketDefinition> pockets = new List<PocketDefinition>();
 }

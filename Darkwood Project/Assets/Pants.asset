@@ -1,0 +1,39 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ae782fd49fc395a4aba8897649049954, type: 3}
+  m_Name: Pants
+  m_EditorClassIdentifier: 
+  itemID: 1
+  displayName: Pants
+  icon: {fileID: 0}
+  gridShape:
+  - {x: 0, y: 0}
+  modules:
+  - rid: 2400048488678686720
+  - rid: 2400048488678686721
+  references:
+    version: 2
+    RefIds:
+    - rid: 2400048488678686720
+      type: {class: ContainerModule, ns: , asm: Assembly-CSharp}
+      data:
+        pockets:
+        - pocketName: left pocket
+          width: 3
+          height: 3
+        - pocketName: right pocket
+          width: 1
+          height: 1
+    - rid: 2400048488678686721
+      type: {class: EquippableModule, ns: , asm: Assembly-CSharp}
+      data:
+        isTwoHanded: 0
