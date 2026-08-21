@@ -4,12 +4,12 @@ using UnityEngine;
 public class EquipmentManager : MonoBehaviour
 {
     [Header("Hand slots")]
-    public ItemData rightHandSlot;
-    public ItemData leftHandSlot;
+    public ItemInstance rightHandSlot;
+    public ItemInstance leftHandSlot;
 
     [Header("Armor slots")]
-    public ItemData pantsSlot;
-    public ItemData pants;
+    public ItemInstance pantsSlot;
+    public ItemInstance pants;
 
     private List<InventoryGrid> activePantsGrids = new List<InventoryGrid>();
 
@@ -21,14 +21,14 @@ public class EquipmentManager : MonoBehaviour
             FindObjectOfType<InventoryUI>().RefreshUI();
         }
     }
-    public bool TryEquip(ItemData item, bool toRightHand)
+    public bool TryEquip(ItemInstance item, bool toRightHand)
     {
         if (item == null) return false;
 
-        EquippableModule equipModule = item.GetModule<EquippableModule>();
+        EquippableModule equipModule = item.itemDef.GetModule<EquippableModule>();
         if (equipModule == null)
         {
-            Debug.Log($"Przedmiot {item.displayName} nie jest do trzymania w rękach!");
+            Debug.Log($"Przedmiot {item.itemDef.displayName} nie jest do trzymania w rękach!");
             return false;
         }
 
@@ -40,13 +40,13 @@ public class EquipmentManager : MonoBehaviour
             rightHandSlot = item;
             leftHandSlot = item;
 
-            Debug.Log($"Założono oburącz: {item.displayName}");
+            Debug.Log($"Założono oburącz: {item.itemDef.displayName}");
             return true;
         }
 
         if (toRightHand)
         {
-            if (rightHandSlot != null && rightHandSlot.GetModule<EquippableModule>()?.isTwoHanded == true)
+            if (rightHandSlot != null && rightHandSlot.itemDef.GetModule<EquippableModule>()?.isTwoHanded == true)
             {
                 DropItem(rightHandSlot);
                 leftHandSlot = null;
@@ -57,11 +57,11 @@ public class EquipmentManager : MonoBehaviour
             }
 
             rightHandSlot = item;
-            Debug.Log($"Prawa ręka chwyta: {item.displayName}");
+            Debug.Log($"Prawa ręka chwyta: {item.itemDef.displayName}");
         }
         else
         {
-            if (leftHandSlot != null && leftHandSlot.GetModule<EquippableModule>()?.isTwoHanded == true)
+            if (leftHandSlot != null && leftHandSlot.itemDef.GetModule<EquippableModule>()?.isTwoHanded == true)
             {
                 DropItem(leftHandSlot);
                 rightHandSlot = null;
@@ -72,20 +72,20 @@ public class EquipmentManager : MonoBehaviour
             }
 
             leftHandSlot = item;
-            Debug.Log($"Lewa ręka chwyta: {item.displayName}");
+            Debug.Log($"Lewa ręka chwyta: {item.itemDef.displayName}");
         }
 
         return true;
     }
 
-    public void EquipPants(ItemData pantsItem)
+    public void EquipPants(ItemInstance pantsItem)
     {
         if (pantsItem == null) return;
 
-        ContainerModule container = pantsItem.GetModule<ContainerModule>();
+        ContainerModule container = pantsItem.itemDef.GetModule<ContainerModule>();
         if (container == null)
         {
-            Debug.Log($"Przedmiot {pantsItem.displayName} nie posiada kieszeni.");
+            Debug.Log($"Przedmiot {pantsItem.itemDef.displayName} nie posiada kieszeni.");
             return;
         }
 
@@ -99,11 +99,11 @@ public class EquipmentManager : MonoBehaviour
             Debug.Log($"Utworzono logiczną kieszeń w pamięci: {pocket.pocketName} ({pocket.width}x{pocket.height})");
         }
     }
-    private void DropItem(ItemData item)
+    private void DropItem(ItemInstance item)
     {
         if (item == null) return;
 
-        Debug.Log($"<color=orange>Wyrzucono na ziemię: {item.displayName}</color>");
+        Debug.Log($"<color=orange>Wyrzucono na ziemię: {item.itemDef.displayName}</color>");
     }
     public List<InventoryGrid> GetActivePantsGrids()
     {

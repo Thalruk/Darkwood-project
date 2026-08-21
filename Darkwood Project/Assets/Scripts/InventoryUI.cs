@@ -29,9 +29,19 @@ public class InventoryUI : MonoBehaviour
             layout.constraintCount = logicGrid.Width;
 
             int totalSlots = logicGrid.Width * logicGrid.Height;
-            for (int i = 0; i < totalSlots; i++)
+            for (int y = 0; y < logicGrid.Height; y++)
             {
-                Instantiate(slotPrefab, newPocketObj.transform);
+                for (int x = 0; x < logicGrid.Width; x++)
+                {
+                    GameObject slotObj = Instantiate(slotPrefab, newPocketObj.transform);
+                    GridSlotUI slotUI = slotObj.GetComponent<GridSlotUI>();
+                    if (slotUI != null)
+                    {
+                        slotUI.x = x;
+                        slotUI.y = y;
+                        slotUI.parentGrid = logicGrid;
+                    }
+                }
             }
         }
     }

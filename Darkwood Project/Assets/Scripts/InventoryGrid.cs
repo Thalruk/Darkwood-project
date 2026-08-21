@@ -4,20 +4,20 @@ public class InventoryGrid
 {
     public int Width { get; private set; }
     public int Height { get; private set; }
-    private ItemData[,] grid;
+    private ItemInstance[,] grid;
 
     public InventoryGrid(int width, int height)
     {
         Width = width;
         Height = height;
-        grid = new ItemData[width, height];
+        grid = new ItemInstance[width, height];
     }
 
-    public bool CanPlaceItem(ItemData item, int startX, int startY)
+    public bool CanPlaceItem(ItemInstance item, int startX, int startY)
     {
-        if (item == null || item.gridShape == null) return false;
+        if (item == null || item.itemDef.gridShape == null) return false;
 
-        foreach (Vector2Int shapePos in item.gridShape)
+        foreach (Vector2Int shapePos in item.itemDef.gridShape)
         {
             int targetX = startX + shapePos.x;
             int targetY = startY + shapePos.y;
@@ -29,11 +29,11 @@ public class InventoryGrid
         return true;
     }
 
-    public bool TryPlaceItem(ItemData item, int startX, int startY)
+    public bool TryPlaceItem(ItemInstance item, int startX, int startY)
     {
         if (!CanPlaceItem(item, startX, startY)) return false;
 
-        foreach (Vector2Int shapePos in item.gridShape)
+        foreach (Vector2Int shapePos in item.itemDef.gridShape)
         {
             int targetX = startX + shapePos.x;
             int targetY = startY + shapePos.y;
@@ -42,7 +42,7 @@ public class InventoryGrid
         return true;
     }
 
-    public void RemoveItem(ItemData item)
+    public void RemoveItem(ItemInstance item)
     {
         if (item == null) return;
 
