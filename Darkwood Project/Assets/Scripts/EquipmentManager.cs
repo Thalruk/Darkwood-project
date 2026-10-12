@@ -93,7 +93,7 @@ public class EquipmentManager : MonoBehaviour
         activePantsGrids.Clear();
         foreach (PocketDefinition pocket in container.pockets)
         {
-            InventoryGrid newGrid = new InventoryGrid(pocket.width, pocket.height);
+            InventoryGrid newGrid = new InventoryGrid(pocket.pocketName, pocket.width, pocket.height);
             activePantsGrids.Add(newGrid);
 
             Debug.Log($"Utworzono logiczną kieszeń w pamięci: {pocket.pocketName} ({pocket.width}x{pocket.height})");

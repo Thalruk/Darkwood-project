@@ -13,10 +13,16 @@ MonoBehaviour:
   m_Name: New Item
   m_EditorClassIdentifier: 
   itemID: 
-  displayName: 
-  icon: {fileID: 0}
+  displayName: gun
+  icon: {fileID: -901895352, guid: 0525fa21cd500424c8817178b7b7dd1d, type: 3}
+  shapeWidth: 3
+  shapeHeight: 3
+  shapeGrid: 010101000100000000
   gridShape:
   - {x: 0, y: 0}
+  - {x: 1, y: 0}
+  - {x: 2, y: 0}
+  - {x: 1, y: 1}
   modules:
   - rid: 2400048464726065152
   references:

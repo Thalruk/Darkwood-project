@@ -24,25 +24,33 @@ public class InventoryUI : MonoBehaviour
         {
             GameObject newPocketObj = Instantiate(pocketPrefab, pocketsContainer);
 
-            GridLayoutGroup layout = newPocketObj.GetComponent<GridLayoutGroup>();
+            PocketUI pocketUI = newPocketObj.GetComponent<PocketUI>();
+
+            GridLayoutGroup layout = pocketUI.gridContainer.GetComponent<GridLayoutGroup>();
             layout.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
             layout.constraintCount = logicGrid.Width;
 
-            int totalSlots = logicGrid.Width * logicGrid.Height;
+            GridSlotUI[,] uiSlots = new GridSlotUI[logicGrid.Width, logicGrid.Height];
+
             for (int y = 0; y < logicGrid.Height; y++)
             {
                 for (int x = 0; x < logicGrid.Width; x++)
                 {
-                    GameObject slotObj = Instantiate(slotPrefab, newPocketObj.transform);
+                    GameObject slotObj = Instantiate(slotPrefab, pocketUI.gridContainer);
                     GridSlotUI slotUI = slotObj.GetComponent<GridSlotUI>();
+
                     if (slotUI != null)
                     {
                         slotUI.x = x;
                         slotUI.y = y;
-                        slotUI.parentGrid = logicGrid;
+                        slotUI.parentPocket = pocketUI;
+                        uiSlots[x, y] = slotUI;
                     }
                 }
             }
+
+            pocketUI.Initialize(logicGrid, uiSlots);
+            pocketUI.RefreshEntireGrid();
         }
     }
 }
