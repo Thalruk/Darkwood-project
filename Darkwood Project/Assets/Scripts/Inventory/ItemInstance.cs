@@ -4,8 +4,11 @@ using System;
 public class ItemInstance
 {
     public ItemData itemDef;
+
     public int currentStack = 1;
     public int currentAmmoInMag = 0;
+
+    [NonSerialized] public WorldItem worldLink;
 
     public ItemInstance(ItemData data, int amount = 1)
     {

@@ -4,6 +4,7 @@ using UnityEngine.UI;
 public class InventoryUI : MonoBehaviour
 {
     public static InventoryUI Instance { get; private set; }
+
     [Header("Backend References")]
     public EquipmentManager equipmentManager;
 
@@ -14,91 +15,127 @@ public class InventoryUI : MonoBehaviour
     public GameObject slotPrefab;
     public GameObject draggableItemPrefab;
 
+    [Header("Loot Scanner")]
+    public Transform lootContainer;
+    public float scanRadius = 3f;
+
     private bool isMenuOpen = false;
 
     private void Awake()
     {
-        if (Instance != null && Instance != this)
-        {
-            Destroy(gameObject);
-            return;
-        }
+        if (Instance != null && Instance != this) { Destroy(gameObject); return; }
         Instance = this;
     }
 
     private void Start()
     {
-        if (inventoryWindow != null)
-        {
-            inventoryWindow.SetActive(false);
-        }
+        if (inventoryWindow != null) inventoryWindow.SetActive(false);
     }
 
     private void Update()
     {
-        if (Input.GetKeyDown(KeyCode.Tab) || Input.GetKeyDown(KeyCode.I))
-        {
-            ToggleMenu();
-        }
+        if (Input.GetKeyDown(KeyCode.Tab) || Input.GetKeyDown(KeyCode.I)) ToggleMenu();
     }
 
     public void ToggleMenu()
     {
         isMenuOpen = !isMenuOpen;
-
-        if (inventoryWindow != null)
-        {
-            inventoryWindow.SetActive(isMenuOpen);
-        }
-
-        if (isMenuOpen)
-        {
-            RefreshUI();
-        }
+        if (inventoryWindow != null) inventoryWindow.SetActive(isMenuOpen);
+        if (isMenuOpen) RefreshUI();
     }
 
     public void RefreshUI()
     {
-        foreach (Transform child in pocketsContainer)
-        {
-            Destroy(child.gameObject);
-        }
+        foreach (Transform child in pocketsContainer) Destroy(child.gameObject);
+        if (lootContainer != null) foreach (Transform child in lootContainer) Destroy(child.gameObject);
 
         var activeGrids = equipmentManager.GetActivePantsGrids();
-
         foreach (InventoryGrid logicGrid in activeGrids)
         {
-            GameObject newPocketObj = Instantiate(pocketPrefab, pocketsContainer);
-            PocketUI pocketUI = newPocketObj.GetComponent<PocketUI>();
+            CreatePocketUI(logicGrid, pocketsContainer);
+        }
 
-            GridLayoutGroup layout = pocketUI.gridContainer.GetComponent<GridLayoutGroup>();
-            layout.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
-            layout.constraintCount = logicGrid.Width;
+        if (lootContainer != null && equipmentManager.playerTransform != null)
+        {
+            Collider2D[] hits = Physics2D.OverlapCircleAll(equipmentManager.playerTransform.position, scanRadius);
 
-            GridSlotUI[,] uiSlots = new GridSlotUI[logicGrid.Width, logicGrid.Height];
-
-            for (int y = 0; y < logicGrid.Height; y++)
+            if (hits.Length > 0)
             {
-                for (int x = 0; x < logicGrid.Width; x++)
-                {
-                    GameObject slotObj = Instantiate(slotPrefab, pocketUI.gridContainer);
-                    GridSlotUI slotUI = slotObj.GetComponent<GridSlotUI>();
+                Debug.Log($"[InventoryUI] Scanned {hits.Length} items on the ground.");
 
-                    if (slotUI != null)
+                RectTransform containerRect = lootContainer.GetComponent<RectTransform>();
+                float availableWidth = containerRect.rect.width;
+
+                int dynamicColumns = Mathf.FloorToInt(availableWidth / 66f);
+                if (dynamicColumns < 1) dynamicColumns = 1;
+
+                Debug.Log($"[InventoryUI] Dynamic grid generated: {dynamicColumns} columns based on {availableWidth}px width.");
+
+                InventoryGrid vicinityGrid = new InventoryGrid("Vicinity / Ground", dynamicColumns, 40);
+
+                foreach (Collider2D hit in hits)
+                {
+                    WorldItem worldItem = hit.GetComponent<WorldItem>();
+                    if (worldItem != null && worldItem.itemInstance != null)
                     {
-                        slotUI.x = x;
-                        slotUI.y = y;
-                        slotUI.parentPocket = pocketUI;
-                        uiSlots[x, y] = slotUI;
+                        worldItem.itemInstance.worldLink = worldItem;
+
+                        bool placed = false;
+                        for (int y = 0; y < vicinityGrid.Height && !placed; y++)
+                        {
+                            for (int x = 0; x < vicinityGrid.Width && !placed; x++)
+                            {
+                                if (vicinityGrid.TryPlaceItem(worldItem.itemInstance, x, y))
+                                    placed = true;
+                            }
+                        }
+
+                        if (!placed) Debug.LogWarning($"[InventoryUI] Vicinity grid is full! Cannot show {worldItem.itemInstance.itemDef.displayName}");
                     }
                 }
+                CreatePocketUI(vicinityGrid, lootContainer);
             }
-
-            pocketUI.Initialize(logicGrid, uiSlots);
-            pocketUI.RefreshEntireGrid();
-
-            Canvas.ForceUpdateCanvases();
-            pocketUI.SpawnSavedItems(draggableItemPrefab);
         }
+
+        Canvas.ForceUpdateCanvases();
+
+        foreach (PocketUI pocketUI in pocketsContainer.GetComponentsInChildren<PocketUI>())
+            pocketUI.SpawnSavedItems(draggableItemPrefab);
+
+        if (lootContainer != null)
+            foreach (PocketUI pocketUI in lootContainer.GetComponentsInChildren<PocketUI>())
+                pocketUI.SpawnSavedItems(draggableItemPrefab);
+    }
+
+    private void CreatePocketUI(InventoryGrid logicGrid, Transform container)
+    {
+        GameObject newPocketObj = Instantiate(pocketPrefab, container);
+        PocketUI pocketUI = newPocketObj.GetComponent<PocketUI>();
+
+        GridLayoutGroup layout = pocketUI.gridContainer.GetComponent<GridLayoutGroup>();
+        layout.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
+        layout.constraintCount = logicGrid.Width;
+
+        GridSlotUI[,] uiSlots = new GridSlotUI[logicGrid.Width, logicGrid.Height];
+
+        for (int y = 0; y < logicGrid.Height; y++)
+        {
+            for (int x = 0; x < logicGrid.Width; x++)
+            {
+                GameObject slotObj = Instantiate(slotPrefab, pocketUI.gridContainer);
+                GridSlotUI slotUI = slotObj.GetComponent<GridSlotUI>();
+
+                if (slotUI != null)
+                {
+                    slotUI.x = x;
+                    slotUI.y = y;
+                    slotUI.parentPocket = pocketUI;
+                    uiSlots[x, y] = slotUI;
+                }
+            }
+        }
+
+        pocketUI.Initialize(logicGrid, uiSlots);
+        pocketUI.RefreshEntireGrid();
     }
 }

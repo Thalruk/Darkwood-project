@@ -9,31 +9,23 @@ public class EquipmentSlotUI : MonoBehaviour, IDropHandler
     public SlotType slotType;
 
     [Header("Memory Connection")]
-    public EquipmentManager equipmentManager;
     public GameObject draggableItemPrefab;
 
-    private void OnEnable()
-    {
-        RefreshSlot();
-    }
+    private void OnEnable() { RefreshSlot(); }
 
     public void RefreshSlot()
     {
-        foreach (Transform child in transform)
-        {
-            Destroy(child.gameObject);
-        }
+        foreach (Transform child in transform) { Destroy(child.gameObject); }
 
-        if (equipmentManager == null || draggableItemPrefab == null) return;
+        if (InventoryUI.Instance == null || InventoryUI.Instance.equipmentManager == null || draggableItemPrefab == null) return;
 
         ItemInstance itemToSpawn = null;
-
         switch (slotType)
         {
-            case SlotType.RightHand: itemToSpawn = equipmentManager.rightHandSlot; break;
-            case SlotType.LeftHand: itemToSpawn = equipmentManager.leftHandSlot; break;
-            case SlotType.Pants: itemToSpawn = equipmentManager.pantsSlot; break;
-            case SlotType.Belt: itemToSpawn = equipmentManager.beltSlot; break;
+            case SlotType.RightHand: itemToSpawn = InventoryUI.Instance.equipmentManager.rightHandSlot; break;
+            case SlotType.LeftHand: itemToSpawn = InventoryUI.Instance.equipmentManager.leftHandSlot; break;
+            case SlotType.Pants: itemToSpawn = InventoryUI.Instance.equipmentManager.pantsSlot; break;
+            case SlotType.Belt: itemToSpawn = InventoryUI.Instance.equipmentManager.beltSlot; break;
         }
 
         if (itemToSpawn != null)
@@ -43,12 +35,25 @@ public class EquipmentSlotUI : MonoBehaviour, IDropHandler
 
             dragScript.itemInstance = itemToSpawn;
             dragScript.currentSlot = null;
+            dragScript.currentEquipmentSlot = this;
 
             RectTransform rect = itemObj.GetComponent<RectTransform>();
             rect.anchorMin = new Vector2(0.5f, 0.5f);
             rect.anchorMax = new Vector2(0.5f, 0.5f);
             rect.pivot = new Vector2(0.5f, 0.5f);
             rect.anchoredPosition = Vector2.zero;
+        }
+    }
+
+    public void ClearSlotMemory()
+    {
+        if (InventoryUI.Instance == null || InventoryUI.Instance.equipmentManager == null) return;
+        switch (slotType)
+        {
+            case SlotType.RightHand: InventoryUI.Instance.equipmentManager.rightHandSlot = null; break;
+            case SlotType.LeftHand: InventoryUI.Instance.equipmentManager.leftHandSlot = null; break;
+            case SlotType.Pants: InventoryUI.Instance.equipmentManager.pantsSlot = null; break;
+            case SlotType.Belt: InventoryUI.Instance.equipmentManager.beltSlot = null; break;
         }
     }
 
@@ -60,36 +65,43 @@ public class EquipmentSlotUI : MonoBehaviour, IDropHandler
             if (droppedItem != null)
             {
                 bool success = false;
-
                 switch (slotType)
                 {
-                    case SlotType.RightHand:
-                        success = equipmentManager.TryEquip(droppedItem.itemInstance, true);
-                        break;
-                    case SlotType.LeftHand:
-                        success = equipmentManager.TryEquip(droppedItem.itemInstance, false);
-                        break;
-                    case SlotType.Pants:
-                        equipmentManager.EquipPants(droppedItem.itemInstance);
-                        success = true;
-                        break;
-                    case SlotType.Belt:
-                        equipmentManager.EquipBelt(droppedItem.itemInstance);
-                        success = true;
-                        break;
+                    case SlotType.RightHand: success = InventoryUI.Instance.equipmentManager.TryEquip(droppedItem.itemInstance, true); break;
+                    case SlotType.LeftHand: success = InventoryUI.Instance.equipmentManager.TryEquip(droppedItem.itemInstance, false); break;
+                    case SlotType.Pants: InventoryUI.Instance.equipmentManager.EquipPants(droppedItem.itemInstance); success = true; break;
+                    case SlotType.Belt: InventoryUI.Instance.equipmentManager.EquipBelt(droppedItem.itemInstance); success = true; break;
                 }
 
                 if (success)
                 {
+                    Debug.Log($"[EquipmentSlotUI] Successfully equipped {droppedItem.itemInstance.itemDef.displayName} to {slotType}");
+
                     if (droppedItem.currentSlot != null)
                     {
                         droppedItem.currentSlot.parentPocket.logicGrid.RemoveItem(droppedItem.itemInstance);
                         droppedItem.currentSlot = null;
                     }
 
+                    if (droppedItem.currentEquipmentSlot != null && droppedItem.currentEquipmentSlot != this)
+                    {
+                        droppedItem.currentEquipmentSlot.ClearSlotMemory();
+                    }
+
+                    if (droppedItem.itemInstance.worldLink != null)
+                    {
+                        Debug.Log($"[EquipmentSlotUI] Removed physical {droppedItem.itemInstance.itemDef.displayName} from ground.");
+                        Destroy(droppedItem.itemInstance.worldLink.gameObject);
+                        droppedItem.itemInstance.worldLink = null;
+                    }
+
                     Destroy(droppedItem.gameObject);
                     RefreshSlot();
                     InventoryUI.Instance.RefreshUI();
+                }
+                else
+                {
+                    Debug.LogWarning($"[EquipmentSlotUI] Failed to equip {droppedItem.itemInstance.itemDef.displayName} to {slotType}. Check EquippableModule.");
                 }
             }
         }

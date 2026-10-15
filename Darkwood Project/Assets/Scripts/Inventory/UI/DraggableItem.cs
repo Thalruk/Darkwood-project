@@ -28,10 +28,7 @@ public class DraggableItem : MonoBehaviour, IBeginDragHandler, IDragHandler, IEn
         le.ignoreLayout = true;
     }
 
-    private void Start()
-    {
-        BuildVisualShape();
-    }
+    private void Start() { BuildVisualShape(); }
 
     private void BuildVisualShape()
     {
@@ -114,15 +111,13 @@ public class DraggableItem : MonoBehaviour, IBeginDragHandler, IDragHandler, IEn
                 transform.SetParent(currentSlot.transform.parent);
                 transform.position = currentSlot.transform.position;
                 transform.SetAsLastSibling();
-
-                currentSlot.parentPocket.logicGrid.TryPlaceItem(itemInstance, currentSlot.x, currentSlot.y);
-                currentSlot.parentPocket.RefreshEntireGrid();
             }
             else
             {
                 transform.SetParent(fallbackParent);
                 transform.position = fallbackPosition;
                 transform.SetAsLastSibling();
+                Debug.Log($"[DraggableItem] Invalid drop, returning {itemInstance.itemDef.displayName} to previous spot.");
             }
         }
     }
