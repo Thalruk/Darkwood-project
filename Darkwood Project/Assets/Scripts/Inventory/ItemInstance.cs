@@ -1,12 +1,10 @@
 using System;
-using UnityEngine;
 
 [Serializable]
 public class ItemInstance
 {
     public ItemData itemDef;
-
-    public int currentStack = 1;      
+    public int currentStack = 1;
     public int currentAmmoInMag = 0;
 
     public ItemInstance(ItemData data, int amount = 1)

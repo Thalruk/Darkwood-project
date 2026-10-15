@@ -5,6 +5,7 @@ public class InventoryGrid
     public string PocketName { get; private set; }
     public int Width { get; private set; }
     public int Height { get; private set; }
+
     private ItemInstance[,] grid;
 
     public InventoryGrid(string name, int width, int height)
@@ -59,6 +60,7 @@ public class InventoryGrid
             }
         }
     }
+
     public ItemInstance GetItemAt(int x, int y)
     {
         if (x < 0 || x >= Width || y < 0 || y >= Height) return null;

@@ -7,16 +7,16 @@ public class Enemy : MonoBehaviour
     public int health = 3;
 
     private NavMeshAgent agent;
+    private float nextAttackTime = 0f;
 
-    void Start()
+    private void Start()
     {
         agent = GetComponent<NavMeshAgent>();
-
         agent.updateRotation = false;
         agent.updateUpAxis = false;
     }
 
-    void Update()
+    private void Update()
     {
         if (player != null)
         {
@@ -33,11 +33,10 @@ public class Enemy : MonoBehaviour
             Destroy(gameObject);
         }
     }
-    private float nextAttackTime = 0f;
 
     private void OnCollisionStay2D(Collision2D collision)
     {
-        Debug.Log("Kloc dotyka obiektu: " + collision.gameObject.name); // DODAJ TYLKO TÊ LINIJKÊ
+        Debug.Log($"Enemy touches object: {collision.gameObject.name}");
 
         if (Time.time >= nextAttackTime)
         {

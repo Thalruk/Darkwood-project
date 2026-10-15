@@ -2,10 +2,7 @@ using System;
 using System.Collections.Generic;
 
 [Serializable]
-public abstract class ItemModule
-{
-
-}
+public abstract class ItemModule { }
 
 [Serializable]
 public class StackableModule : ItemModule
@@ -25,10 +22,11 @@ public class EquippableModule : ItemModule
 {
     public bool isTwoHanded = false;
 }
+
 [Serializable]
 public class PocketDefinition
 {
-    public string pocketName = "Kieszeń";
+    public string pocketName = "Pocket";
     public int width = 2;
     public int height = 2;
 }

@@ -6,7 +6,6 @@ public class GridSlotUI : MonoBehaviour, IDropHandler, IPointerEnterHandler, IPo
 {
     public int x;
     public int y;
-
     public PocketUI parentPocket;
 
     private Image image;

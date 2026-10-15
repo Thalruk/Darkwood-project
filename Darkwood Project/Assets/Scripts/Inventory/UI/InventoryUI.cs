@@ -3,13 +3,59 @@ using UnityEngine.UI;
 
 public class InventoryUI : MonoBehaviour
 {
-    [Header("Referencje Backendowe")]
+    public static InventoryUI Instance { get; private set; }
+    [Header("Backend References")]
     public EquipmentManager equipmentManager;
 
-    [Header("Referencje UI")]
+    [Header("UI References")]
+    public GameObject inventoryWindow;
     public Transform pocketsContainer;
     public GameObject pocketPrefab;
     public GameObject slotPrefab;
+    public GameObject draggableItemPrefab;
+
+    private bool isMenuOpen = false;
+
+    private void Awake()
+    {
+        if (Instance != null && Instance != this)
+        {
+            Destroy(gameObject);
+            return;
+        }
+        Instance = this;
+    }
+
+    private void Start()
+    {
+        if (inventoryWindow != null)
+        {
+            inventoryWindow.SetActive(false);
+        }
+    }
+
+    private void Update()
+    {
+        if (Input.GetKeyDown(KeyCode.Tab) || Input.GetKeyDown(KeyCode.I))
+        {
+            ToggleMenu();
+        }
+    }
+
+    public void ToggleMenu()
+    {
+        isMenuOpen = !isMenuOpen;
+
+        if (inventoryWindow != null)
+        {
+            inventoryWindow.SetActive(isMenuOpen);
+        }
+
+        if (isMenuOpen)
+        {
+            RefreshUI();
+        }
+    }
 
     public void RefreshUI()
     {
@@ -23,7 +69,6 @@ public class InventoryUI : MonoBehaviour
         foreach (InventoryGrid logicGrid in activeGrids)
         {
             GameObject newPocketObj = Instantiate(pocketPrefab, pocketsContainer);
-
             PocketUI pocketUI = newPocketObj.GetComponent<PocketUI>();
 
             GridLayoutGroup layout = pocketUI.gridContainer.GetComponent<GridLayoutGroup>();
@@ -51,6 +96,9 @@ public class InventoryUI : MonoBehaviour
 
             pocketUI.Initialize(logicGrid, uiSlots);
             pocketUI.RefreshEntireGrid();
+
+            Canvas.ForceUpdateCanvases();
+            pocketUI.SpawnSavedItems(draggableItemPrefab);
         }
     }
 }

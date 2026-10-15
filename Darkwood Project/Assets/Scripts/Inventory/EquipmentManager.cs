@@ -3,24 +3,32 @@ using UnityEngine;
 
 public class EquipmentManager : MonoBehaviour
 {
-    [Header("Hand slots")]
+    [Header("Hand Slots")]
     public ItemInstance rightHandSlot;
     public ItemInstance leftHandSlot;
 
-    [Header("Armor slots")]
+    [Header("Armor Slots")]
     public ItemInstance pantsSlot;
+    public ItemInstance beltSlot;
+
+    [Header("Debug/Testing")]
     public ItemInstance pants;
+
+    [Header("World Interaction")]
+    public Transform playerTransform;
+    public GameObject worldItemPrefab;
 
     private List<InventoryGrid> activePantsGrids = new List<InventoryGrid>();
 
-    void Update()
+    private void Update()
     {
         if (Input.GetKeyDown(KeyCode.Space))
         {
             EquipPants(pants);
-            FindObjectOfType<InventoryUI>().RefreshUI();
+            InventoryUI.Instance.RefreshUI();
         }
     }
+
     public bool TryEquip(ItemInstance item, bool toRightHand)
     {
         if (item == null) return false;
@@ -28,19 +36,19 @@ public class EquipmentManager : MonoBehaviour
         EquippableModule equipModule = item.itemDef.GetModule<EquippableModule>();
         if (equipModule == null)
         {
-            Debug.Log($"Przedmiot {item.itemDef.displayName} nie jest do trzymania w rękach!");
+            Debug.Log($"Item {item.itemDef.displayName} cannot be held in hands!");
             return false;
         }
 
         if (equipModule.isTwoHanded)
         {
-            if (rightHandSlot != null) DropItem(rightHandSlot);
-            if (leftHandSlot != null && leftHandSlot != rightHandSlot) DropItem(leftHandSlot);
+            if (rightHandSlot != null) DropItemOnGround(rightHandSlot);
+            if (leftHandSlot != null && leftHandSlot != rightHandSlot) DropItemOnGround(leftHandSlot);
 
             rightHandSlot = item;
             leftHandSlot = item;
 
-            Debug.Log($"Założono oburącz: {item.itemDef.displayName}");
+            Debug.Log($"Equipped two-handed: {item.itemDef.displayName}");
             return true;
         }
 
@@ -48,31 +56,31 @@ public class EquipmentManager : MonoBehaviour
         {
             if (rightHandSlot != null && rightHandSlot.itemDef.GetModule<EquippableModule>()?.isTwoHanded == true)
             {
-                DropItem(rightHandSlot);
+                DropItemOnGround(rightHandSlot);
                 leftHandSlot = null;
             }
             else if (rightHandSlot != null)
             {
-                DropItem(rightHandSlot);
+                DropItemOnGround(rightHandSlot);
             }
 
             rightHandSlot = item;
-            Debug.Log($"Prawa ręka chwyta: {item.itemDef.displayName}");
+            Debug.Log($"Right hand equipped: {item.itemDef.displayName}");
         }
         else
         {
             if (leftHandSlot != null && leftHandSlot.itemDef.GetModule<EquippableModule>()?.isTwoHanded == true)
             {
-                DropItem(leftHandSlot);
+                DropItemOnGround(leftHandSlot);
                 rightHandSlot = null;
             }
             else if (leftHandSlot != null)
             {
-                DropItem(leftHandSlot);
+                DropItemOnGround(leftHandSlot);
             }
 
             leftHandSlot = item;
-            Debug.Log($"Lewa ręka chwyta: {item.itemDef.displayName}");
+            Debug.Log($"Left hand equipped: {item.itemDef.displayName}");
         }
 
         return true;
@@ -85,29 +93,49 @@ public class EquipmentManager : MonoBehaviour
         ContainerModule container = pantsItem.itemDef.GetModule<ContainerModule>();
         if (container == null)
         {
-            Debug.Log($"Przedmiot {pantsItem.itemDef.displayName} nie posiada kieszeni.");
+            Debug.Log($"Item {pantsItem.itemDef.displayName} has no pockets.");
             return;
         }
 
         pantsSlot = pantsItem;
         activePantsGrids.Clear();
+
         foreach (PocketDefinition pocket in container.pockets)
         {
             InventoryGrid newGrid = new InventoryGrid(pocket.pocketName, pocket.width, pocket.height);
             activePantsGrids.Add(newGrid);
 
-            Debug.Log($"Utworzono logiczną kieszeń w pamięci: {pocket.pocketName} ({pocket.width}x{pocket.height})");
+            Debug.Log($"Created logical pocket in memory: {pocket.pocketName} ({pocket.width}x{pocket.height})");
         }
     }
-    private void DropItem(ItemInstance item)
-    {
-        if (item == null) return;
 
-        Debug.Log($"<color=orange>Wyrzucono na ziemię: {item.itemDef.displayName}</color>");
+    public void EquipBelt(ItemInstance beltItem)
+    {
+        if (beltItem == null) return;
+
+        beltSlot = beltItem;
+        Debug.Log($"Equipped belt/accessory: {beltItem.itemDef.displayName}");
     }
+
+    public void DropItemOnGround(ItemInstance item)
+    {
+        if (item == null || worldItemPrefab == null || playerTransform == null) return;
+
+        Vector3 dropOffset = new Vector3(Random.Range(-0.5f, 0.5f), Random.Range(-0.5f, 0.5f), 0);
+
+        GameObject droppedObj = Instantiate(worldItemPrefab, playerTransform.position + dropOffset, Quaternion.identity);
+
+        WorldItem worldItem = droppedObj.GetComponent<WorldItem>();
+        if (worldItem != null)
+        {
+            worldItem.Setup(item);
+        }
+
+        Debug.Log($"Dropped physical item on ground: {item.itemDef.displayName}");
+    }
+
     public List<InventoryGrid> GetActivePantsGrids()
     {
         return activePantsGrids;
     }
 }
-
