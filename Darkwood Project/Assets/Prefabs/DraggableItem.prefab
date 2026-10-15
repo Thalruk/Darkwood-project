@@ -92,6 +92,7 @@ MonoBehaviour:
     itemDef: {fileID: 0}
     currentStack: 0
     currentAmmoInMag: 0
-  cellSize: 64
+  cellSize: 48
   spacing: 2
   currentSlot: {fileID: 0}
+  currentEquipmentSlot: {fileID: 0}

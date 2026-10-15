@@ -26,6 +26,7 @@ public class EquipmentSlotUI : MonoBehaviour, IDropHandler
             case SlotType.LeftHand: itemToSpawn = InventoryUI.Instance.equipmentManager.leftHandSlot; break;
             case SlotType.Pants: itemToSpawn = InventoryUI.Instance.equipmentManager.pantsSlot; break;
             case SlotType.Belt: itemToSpawn = InventoryUI.Instance.equipmentManager.beltSlot; break;
+            case SlotType.Backpack: itemToSpawn = InventoryUI.Instance.equipmentManager.backpackSlot; break;
         }
 
         if (itemToSpawn != null)
@@ -54,6 +55,7 @@ public class EquipmentSlotUI : MonoBehaviour, IDropHandler
             case SlotType.LeftHand: InventoryUI.Instance.equipmentManager.leftHandSlot = null; break;
             case SlotType.Pants: InventoryUI.Instance.equipmentManager.pantsSlot = null; break;
             case SlotType.Belt: InventoryUI.Instance.equipmentManager.beltSlot = null; break;
+            case SlotType.Backpack: InventoryUI.Instance.equipmentManager.backpackSlot = null; break;
         }
     }
 
@@ -71,6 +73,7 @@ public class EquipmentSlotUI : MonoBehaviour, IDropHandler
                     case SlotType.LeftHand: success = InventoryUI.Instance.equipmentManager.TryEquip(droppedItem.itemInstance, false); break;
                     case SlotType.Pants: InventoryUI.Instance.equipmentManager.EquipPants(droppedItem.itemInstance); success = true; break;
                     case SlotType.Belt: InventoryUI.Instance.equipmentManager.EquipBelt(droppedItem.itemInstance); success = true; break;
+                    case SlotType.Backpack: InventoryUI.Instance.equipmentManager.EquipBackpack(droppedItem.itemInstance); success = true; break;
                 }
 
                 if (success)

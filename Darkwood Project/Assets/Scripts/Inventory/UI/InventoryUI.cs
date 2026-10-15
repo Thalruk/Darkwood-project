@@ -14,7 +14,8 @@ public class InventoryUI : MonoBehaviour
     public GameObject pocketPrefab;
     public GameObject slotPrefab;
     public GameObject draggableItemPrefab;
-
+    public RectTransform leftPanelBounds;
+    public GameObject containerGroupPrefab;
     [Header("Loot Scanner")]
     public Transform lootContainer;
     public float scanRadius = 3f;
@@ -41,7 +42,11 @@ public class InventoryUI : MonoBehaviour
     {
         isMenuOpen = !isMenuOpen;
         if (inventoryWindow != null) inventoryWindow.SetActive(isMenuOpen);
-        if (isMenuOpen) RefreshUI();
+        if (isMenuOpen)
+        {
+            Canvas.ForceUpdateCanvases();
+            RefreshUI();
+        }
     }
 
     public void RefreshUI()
@@ -49,11 +54,32 @@ public class InventoryUI : MonoBehaviour
         foreach (Transform child in pocketsContainer) Destroy(child.gameObject);
         if (lootContainer != null) foreach (Transform child in lootContainer) Destroy(child.gameObject);
 
-        var activeGrids = equipmentManager.GetActivePantsGrids();
-        foreach (InventoryGrid logicGrid in activeGrids)
+        var activePantsGrids = equipmentManager.GetActivePantsGrids();
+        if (activePantsGrids.Count > 0 && containerGroupPrefab != null)
         {
-            CreatePocketUI(logicGrid, pocketsContainer);
+            GameObject pantsGroupObj = Instantiate(containerGroupPrefab, pocketsContainer);
+            ContainerGroupUI pantsGroupUI = pantsGroupObj.GetComponent<ContainerGroupUI>();
+            pantsGroupUI.Initialize("Pants");
+
+            foreach (InventoryGrid logicGrid in activePantsGrids)
+            {
+                CreatePocketUI(logicGrid, pantsGroupUI.pocketsContainer);
+            }
         }
+
+        var activeBackpackGrids = equipmentManager.GetActiveBackpackGrids();
+        if (activeBackpackGrids.Count > 0 && containerGroupPrefab != null)
+        {
+            GameObject backpackGroupObj = Instantiate(containerGroupPrefab, pocketsContainer);
+            ContainerGroupUI backpackGroupUI = backpackGroupObj.GetComponent<ContainerGroupUI>();
+            backpackGroupUI.Initialize("Backpack");
+
+            foreach (InventoryGrid logicGrid in activeBackpackGrids)
+            {
+                CreatePocketUI(logicGrid, backpackGroupUI.pocketsContainer);
+            }
+        }
+
 
         if (lootContainer != null && equipmentManager.playerTransform != null)
         {
@@ -63,15 +89,14 @@ public class InventoryUI : MonoBehaviour
             {
                 Debug.Log($"[InventoryUI] Scanned {hits.Length} items on the ground.");
 
-                RectTransform containerRect = lootContainer.GetComponent<RectTransform>();
-                float availableWidth = containerRect.rect.width;
+                float availableWidth = leftPanelBounds.rect.width - 20f;
 
                 int dynamicColumns = Mathf.FloorToInt(availableWidth / 66f);
                 if (dynamicColumns < 1) dynamicColumns = 1;
 
                 Debug.Log($"[InventoryUI] Dynamic grid generated: {dynamicColumns} columns based on {availableWidth}px width.");
 
-                InventoryGrid vicinityGrid = new InventoryGrid("Vicinity / Ground", dynamicColumns, 40);
+                InventoryGrid vicinityGrid = new InventoryGrid("Ground", dynamicColumns, 40);
 
                 foreach (Collider2D hit in hits)
                 {

@@ -10,6 +10,7 @@ public class EquipmentManager : MonoBehaviour
     [Header("Armor Slots")]
     public ItemInstance pantsSlot;
     public ItemInstance beltSlot;
+    public ItemInstance backpackSlot;
 
     [Header("Debug/Testing")]
     public ItemInstance pants;
@@ -19,6 +20,8 @@ public class EquipmentManager : MonoBehaviour
     public GameObject worldItemPrefab;
 
     private List<InventoryGrid> activePantsGrids = new List<InventoryGrid>();
+    private List<InventoryGrid> activeBackpackGrids = new List<InventoryGrid>();
+
 
     private void Update()
     {
@@ -117,6 +120,31 @@ public class EquipmentManager : MonoBehaviour
         Debug.Log($"Equipped belt/accessory: {beltItem.itemDef.displayName}");
     }
 
+    public void EquipBackpack(ItemInstance backpackItem)
+    {
+        if (backpackItem == null) return;
+
+        backpackSlot = backpackItem;
+        activeBackpackGrids.Clear();
+
+        ContainerModule container = backpackItem.itemDef.GetModule<ContainerModule>();
+        if (container == null)
+        {
+            Debug.Log($"Item {backpackItem.itemDef.displayName} has no pockets.");
+            return;
+        }
+
+        foreach (PocketDefinition pocket in container.pockets)
+        {
+            InventoryGrid newGrid = new InventoryGrid(pocket.pocketName, pocket.width, pocket.height);
+            activeBackpackGrids.Add(newGrid);
+
+            Debug.Log($"Created logical pocket in memory: {pocket.pocketName} ({pocket.width}x{pocket.height})");
+        }
+
+        Debug.Log($"Equipped backpack: {backpackItem.itemDef.displayName}");
+    }
+
     public void DropItemOnGround(ItemInstance item)
     {
         if (item == null || worldItemPrefab == null || playerTransform == null) return;
@@ -137,5 +165,9 @@ public class EquipmentManager : MonoBehaviour
     public List<InventoryGrid> GetActivePantsGrids()
     {
         return activePantsGrids;
+    }
+    public List<InventoryGrid> GetActiveBackpackGrids()
+    {
+        return activeBackpackGrids;
     }
 }
