@@ -3,9 +3,8 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
-public class DraggableItem : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler
+public class DraggableItem : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler, IPointerClickHandler
 {
-    // --- NOWE EVENTY ---
     public static event Action<ItemInstance> OnItemDragStart;
     public static event Action OnItemDragEnd;
 
@@ -22,6 +21,7 @@ public class DraggableItem : MonoBehaviour, IBeginDragHandler, IDragHandler, IEn
     private Transform fallbackParent;
     private Vector3 fallbackPosition;
     private Image rootImage;
+    private Vector3 dragOffset;
 
     public static DraggableItem currentlyDraggedItem;
 
@@ -92,9 +92,13 @@ public class DraggableItem : MonoBehaviour, IBeginDragHandler, IDragHandler, IEn
 
     public void OnBeginDrag(PointerEventData eventData)
     {
+        if (eventData.button != PointerEventData.InputButton.Left) return;
+
         currentlyDraggedItem = this;
         fallbackParent = transform.parent;
         fallbackPosition = transform.position;
+
+        dragOffset = transform.position - (Vector3)eventData.position;
 
         Canvas canvas = GetComponentInParent<Canvas>();
         transform.SetParent(canvas != null ? canvas.transform : transform.root);
@@ -112,11 +116,15 @@ public class DraggableItem : MonoBehaviour, IBeginDragHandler, IDragHandler, IEn
 
     public void OnDrag(PointerEventData eventData)
     {
-        transform.position = Input.mousePosition;
+        if (eventData.button != PointerEventData.InputButton.Left) return;
+
+        transform.position = (Vector3)eventData.position + dragOffset;
     }
 
     public void OnEndDrag(PointerEventData eventData)
     {
+        if (eventData.button != PointerEventData.InputButton.Left) return;
+
         OnItemDragEnd?.Invoke();
 
         if (this == null || gameObject == null) return;
@@ -141,6 +149,29 @@ public class DraggableItem : MonoBehaviour, IBeginDragHandler, IDragHandler, IEn
                 transform.position = fallbackPosition;
                 transform.SetAsLastSibling();
             }
+        }
+    }
+
+    public void OnPointerClick(PointerEventData eventData)
+    {
+        if (eventData.button == PointerEventData.InputButton.Right)
+        {
+            Debug.Log($"[DraggableItem] Prawy Przycisk Myszy kliknięty na: {itemInstance.itemDef.displayName}");
+        }
+    }
+
+    public void DestroyWorldLink()
+    {
+        if (itemInstance != null && itemInstance.worldLink != null)
+        {
+            Collider2D[] cols = itemInstance.worldLink.GetComponentsInChildren<Collider2D>();
+            foreach (Collider2D c in cols)
+            {
+                c.enabled = false;
+            }
+
+            Destroy(itemInstance.worldLink.gameObject);
+            itemInstance.worldLink = null;
         }
     }
 

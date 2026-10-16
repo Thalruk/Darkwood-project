@@ -73,14 +73,7 @@ public class GridSlotUI : MonoBehaviour, IDropHandler, IPointerEnterHandler, IPo
                         droppedItem.currentEquipmentSlot = null;
                     }
 
-                    if (droppedItem.itemInstance.worldLink != null)
-                    {
-                        Collider2D col = droppedItem.itemInstance.worldLink.GetComponent<Collider2D>();
-                        if (col != null) col.enabled = false;
-
-                        Destroy(droppedItem.itemInstance.worldLink.gameObject);
-                        droppedItem.itemInstance.worldLink = null;
-                    }
+                    droppedItem.DestroyWorldLink();
 
                     droppedItem.currentSlot = this;
                     droppedItem.transform.SetParent(transform.parent);

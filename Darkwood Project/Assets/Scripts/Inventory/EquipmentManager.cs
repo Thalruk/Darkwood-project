@@ -64,6 +64,8 @@ public class EquipmentManager : MonoBehaviour
 
         if (equipModule.isTwoHanded)
         {
+            if (rightHandSlot == item && leftHandSlot == item) return true;
+
             if (HasValidItem(rightHandSlot)) DropItemOnGround(rightHandSlot);
             if (HasValidItem(leftHandSlot) && leftHandSlot != rightHandSlot) DropItemOnGround(leftHandSlot);
 
@@ -74,11 +76,15 @@ public class EquipmentManager : MonoBehaviour
 
         if (toRightHand)
         {
+            if (rightHandSlot == item) return true;
+
             if (HasValidItem(rightHandSlot)) DropItemOnGround(rightHandSlot);
             rightHandSlot = item;
         }
         else
         {
+            if (leftHandSlot == item) return true;
+
             if (HasValidItem(leftHandSlot)) DropItemOnGround(leftHandSlot);
             leftHandSlot = item;
         }
@@ -96,7 +102,9 @@ public class EquipmentManager : MonoBehaviour
         ContainerModule container = pantsItem.itemDef.GetModule<ContainerModule>();
         if (container == null) return false;
 
-        if (HasValidItem(pantsSlot) && pantsSlot != pantsItem)
+        if (pantsSlot == pantsItem) return true;
+
+        if (HasValidItem(pantsSlot))
         {
             SpillAndClearGrids(activePantsGrids);
             DropItemOnGround(pantsSlot);
@@ -119,7 +127,9 @@ public class EquipmentManager : MonoBehaviour
         EquippableModule equipModule = beltItem.itemDef.GetModule<EquippableModule>();
         if (equipModule == null || equipModule.equipType != EquipmentType.Belt) return false;
 
-        if (HasValidItem(beltSlot) && beltSlot != beltItem) DropItemOnGround(beltSlot);
+        if (beltSlot == beltItem) return true;
+
+        if (HasValidItem(beltSlot)) DropItemOnGround(beltSlot);
 
         beltSlot = beltItem;
         return true;
@@ -135,7 +145,9 @@ public class EquipmentManager : MonoBehaviour
         ContainerModule container = backpackItem.itemDef.GetModule<ContainerModule>();
         if (container == null) return false;
 
-        if (HasValidItem(backpackSlot) && backpackSlot != backpackItem)
+        if (backpackSlot == backpackItem) return true;
+
+        if (HasValidItem(backpackSlot))
         {
             SpillAndClearGrids(activeBackpackGrids);
             DropItemOnGround(backpackSlot);

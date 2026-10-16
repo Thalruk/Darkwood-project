@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -54,39 +55,8 @@ public class InventoryUI : MonoBehaviour
         ClearContainer(pocketsContainer);
         if (lootContainer != null) ClearContainer(lootContainer);
 
-        var activePantsGrids = equipmentManager.GetActivePantsGrids();
-        if (activePantsGrids.Count > 0 && containerGroupPrefab != null)
-        {
-            GameObject pantsGroupObj = Instantiate(containerGroupPrefab, pocketsContainer);
-            ContainerGroupUI pantsGroupUI = pantsGroupObj.GetComponent<ContainerGroupUI>();
-
-            if (pantsGroupUI != null)
-            {
-                pantsGroupUI.Initialize("Pants");
-                foreach (InventoryGrid logicGrid in activePantsGrids)
-                {
-                    CreatePocketUI(logicGrid, pantsGroupUI.pocketsContainer);
-                }
-            }
-            else Debug.LogError("[InventoryUI] BŁĄD: Twój prefab 'ContainerGroupPrefab' nie ma podpiętego skryptu ContainerGroupUI!");
-        }
-
-        var activeBackpackGrids = equipmentManager.GetActiveBackpackGrids();
-        if (activeBackpackGrids.Count > 0 && containerGroupPrefab != null)
-        {
-            GameObject backpackGroupObj = Instantiate(containerGroupPrefab, pocketsContainer);
-            ContainerGroupUI backpackGroupUI = backpackGroupObj.GetComponent<ContainerGroupUI>();
-
-            if (backpackGroupUI != null)
-            {
-                backpackGroupUI.Initialize("Backpack");
-                foreach (InventoryGrid logicGrid in activeBackpackGrids)
-                {
-                    CreatePocketUI(logicGrid, backpackGroupUI.pocketsContainer);
-                }
-            }
-            else Debug.LogError("[InventoryUI] BŁĄD: Twój prefab 'ContainerGroupPrefab' nie ma podpiętego skryptu ContainerGroupUI!");
-        }
+        BuildPocketGroup("Pants", equipmentManager.GetActivePantsGrids());
+        BuildPocketGroup("Backpack", equipmentManager.GetActiveBackpackGrids());
 
         if (lootContainer != null && equipmentManager.playerTransform != null)
         {
@@ -155,6 +125,26 @@ public class InventoryUI : MonoBehaviour
         LayoutRebuilder.ForceRebuildLayoutImmediate(root);
     }
 
+    private void BuildPocketGroup(string title, List<InventoryGrid> grids)
+    {
+        if (grids.Count == 0 || containerGroupPrefab == null) return;
+
+        GameObject groupObj = Instantiate(containerGroupPrefab, pocketsContainer);
+        ContainerGroupUI groupUI = groupObj.GetComponent<ContainerGroupUI>();
+
+        if (groupUI != null)
+        {
+            groupUI.Initialize(title);
+            foreach (InventoryGrid logicGrid in grids)
+            {
+                CreatePocketUI(logicGrid, groupUI.pocketsContainer);
+            }
+        }
+        else
+        {
+            Debug.LogError($"[InventoryUI] BŁĄD: Twój prefab dla {title} nie ma podpiętego skryptu ContainerGroupUI!");
+        }
+    }
     private void CreatePocketUI(InventoryGrid logicGrid, Transform container)
     {
         if (container == null)

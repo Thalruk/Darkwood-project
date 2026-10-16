@@ -141,50 +141,39 @@ public class EquipmentSlotUI : MonoBehaviour, IDropHandler
 
     public void OnDrop(PointerEventData eventData)
     {
-        if (eventData.pointerDrag != null)
+        if (eventData.pointerDrag == null) return;
+
+        DraggableItem droppedItem = eventData.pointerDrag.GetComponent<DraggableItem>();
+        if (droppedItem == null) return;
+
+        bool success = false;
+        switch (slotType)
         {
-            DraggableItem droppedItem = eventData.pointerDrag.GetComponent<DraggableItem>();
-            if (droppedItem != null)
+            case SlotType.RightHand: success = InventoryUI.Instance.equipmentManager.TryEquip(droppedItem.itemInstance, true); break;
+            case SlotType.LeftHand: success = InventoryUI.Instance.equipmentManager.TryEquip(droppedItem.itemInstance, false); break;
+            case SlotType.Pants: success = InventoryUI.Instance.equipmentManager.EquipPants(droppedItem.itemInstance); break;
+            case SlotType.Belt: success = InventoryUI.Instance.equipmentManager.EquipBelt(droppedItem.itemInstance); break;
+            case SlotType.Backpack: success = InventoryUI.Instance.equipmentManager.EquipBackpack(droppedItem.itemInstance); break;
+        }
+
+        if (success)
+        {
+            if (droppedItem.currentSlot != null)
             {
-                bool success = false;
-                switch (slotType)
-                {
-                    case SlotType.RightHand: success = InventoryUI.Instance.equipmentManager.TryEquip(droppedItem.itemInstance, true); break;
-                    case SlotType.LeftHand: success = InventoryUI.Instance.equipmentManager.TryEquip(droppedItem.itemInstance, false); break;
-                    case SlotType.Pants: success = InventoryUI.Instance.equipmentManager.EquipPants(droppedItem.itemInstance); break;
-                    case SlotType.Belt: success = InventoryUI.Instance.equipmentManager.EquipBelt(droppedItem.itemInstance); break;
-                    case SlotType.Backpack: success = InventoryUI.Instance.equipmentManager.EquipBackpack(droppedItem.itemInstance); break;
-                }
-
-                if (success)
-                {
-                    if (droppedItem.currentSlot != null)
-                    {
-                        droppedItem.currentSlot.parentPocket.logicGrid.RemoveItem(droppedItem.itemInstance);
-                        droppedItem.currentSlot = null;
-                    }
-
-                    if (droppedItem.currentEquipmentSlot != null && droppedItem.currentEquipmentSlot != this)
-                    {
-                        droppedItem.currentEquipmentSlot.ClearSlotMemory();
-                    }
-
-                    if (droppedItem.itemInstance.worldLink != null)
-                    {
-                        // WYMUSZONE OŚLEPIENIE SKANERA: 
-                        // Wyłączamy wszystkie collidery w modelu, by fizyka nie widziała go podczas niszczenia.
-                        Collider2D[] cols = droppedItem.itemInstance.worldLink.GetComponentsInChildren<Collider2D>();
-                        foreach (Collider2D c in cols) c.enabled = false;
-
-                        Destroy(droppedItem.itemInstance.worldLink.gameObject);
-                        droppedItem.itemInstance.worldLink = null;
-                    }
-
-                    Destroy(droppedItem.gameObject);
-                    RefreshSlot();
-                    InventoryUI.Instance.RefreshUI();
-                }
+                droppedItem.currentSlot.parentPocket.logicGrid.RemoveItem(droppedItem.itemInstance);
+                droppedItem.currentSlot = null;
             }
+
+            if (droppedItem.currentEquipmentSlot != null && droppedItem.currentEquipmentSlot != this)
+            {
+                droppedItem.currentEquipmentSlot.ClearSlotMemory();
+            }
+
+            droppedItem.DestroyWorldLink(); // <- Ekstrakcja! Jedna linijka zamiast siedmiu!
+            Destroy(droppedItem.gameObject);
+
+            RefreshSlot();
+            InventoryUI.Instance.RefreshUI();
         }
     }
 }
