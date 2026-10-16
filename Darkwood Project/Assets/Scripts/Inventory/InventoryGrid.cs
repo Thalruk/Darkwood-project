@@ -4,13 +4,15 @@ public class InventoryGrid
 {
     public int Width { get; private set; }
     public int Height { get; private set; }
+    public bool IsGround { get; private set; }
 
     private ItemInstance[,] grid;
 
-    public InventoryGrid(int width, int height)
+    public InventoryGrid(int width, int height, bool isGround = false)
     {
         Width = width;
         Height = height;
+        IsGround = isGround;
         grid = new ItemInstance[width, height];
     }
 

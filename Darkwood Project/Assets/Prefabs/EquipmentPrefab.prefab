@@ -90,7 +90,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   slotType: 0
-  draggableItemPrefab: {fileID: 0}
+  draggableItemPrefab: {fileID: 5489361648518620305, guid: 3ac6db1e25eb5dd499c0e3ebf3326a5e, type: 3}
 --- !u!114 &8334483769913525107
 MonoBehaviour:
   m_ObjectHideFlags: 0

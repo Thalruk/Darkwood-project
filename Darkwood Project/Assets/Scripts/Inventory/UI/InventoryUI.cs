@@ -93,7 +93,7 @@ public class InventoryUI : MonoBehaviour
                 int dynamicColumns = Mathf.FloorToInt(availableWidth / 66f);
                 if (dynamicColumns < 1) dynamicColumns = 1;
 
-                InventoryGrid vicinityGrid = new InventoryGrid(dynamicColumns, 40);
+                InventoryGrid vicinityGrid = new InventoryGrid(dynamicColumns, 40, true);
 
                 foreach (Collider2D hit in hits)
                 {

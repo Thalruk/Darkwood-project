@@ -43,6 +43,28 @@ public class GridSlotUI : MonoBehaviour, IDropHandler, IPointerEnterHandler, IPo
             DraggableItem droppedItem = eventData.pointerDrag.GetComponent<DraggableItem>();
             if (droppedItem != null)
             {
+                if (parentPocket.logicGrid.IsGround)
+                {
+                    if (droppedItem.itemInstance.worldLink == null)
+                    {
+                        InventoryUI.Instance.equipmentManager.DropItemOnGround(droppedItem.itemInstance);
+                    }
+
+                    if (droppedItem.currentSlot != null)
+                    {
+                        droppedItem.currentSlot.parentPocket.logicGrid.RemoveItem(droppedItem.itemInstance);
+                    }
+
+                    if (droppedItem.currentEquipmentSlot != null)
+                    {
+                        droppedItem.currentEquipmentSlot.ClearSlotMemory();
+                    }
+
+                    Destroy(droppedItem.gameObject);
+                    InventoryUI.Instance.RefreshUI();
+                    return;
+                }
+
                 if (parentPocket.logicGrid.TryPlaceItem(droppedItem.itemInstance, x, y))
                 {
                     if (droppedItem.currentEquipmentSlot != null)
@@ -53,7 +75,6 @@ public class GridSlotUI : MonoBehaviour, IDropHandler, IPointerEnterHandler, IPo
 
                     if (droppedItem.itemInstance.worldLink != null)
                     {
-                        Debug.Log($"[GridSlotUI] Picked up physical item from ground: {droppedItem.itemInstance.itemDef.displayName}");
                         Destroy(droppedItem.itemInstance.worldLink.gameObject);
                         droppedItem.itemInstance.worldLink = null;
                     }
@@ -63,12 +84,8 @@ public class GridSlotUI : MonoBehaviour, IDropHandler, IPointerEnterHandler, IPo
                     droppedItem.transform.position = transform.position;
                     droppedItem.transform.SetAsLastSibling();
                 }
-                else
-                {
-                    Debug.LogWarning($"[GridSlotUI] Cannot place {droppedItem.itemInstance.itemDef.displayName} here. No space!");
-                }
 
-                parentPocket.RefreshEntireGrid();
+                InventoryUI.Instance.RefreshUI();
             }
         }
     }

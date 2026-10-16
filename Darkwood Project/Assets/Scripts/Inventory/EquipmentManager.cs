@@ -12,9 +12,6 @@ public class EquipmentManager : MonoBehaviour
     public ItemInstance beltSlot;
     public ItemInstance backpackSlot;
 
-    [Header("Debug/Testing")]
-    public ItemInstance pants;
-
     [Header("World Interaction")]
     public Transform playerTransform;
     public GameObject worldItemPrefab;
@@ -22,24 +19,14 @@ public class EquipmentManager : MonoBehaviour
     private List<InventoryGrid> activePantsGrids = new List<InventoryGrid>();
     private List<InventoryGrid> activeBackpackGrids = new List<InventoryGrid>();
 
-
-    private void Update()
-    {
-        if (Input.GetKeyDown(KeyCode.Space))
-        {
-            EquipPants(pants);
-            InventoryUI.Instance.RefreshUI();
-        }
-    }
-
     public bool TryEquip(ItemInstance item, bool toRightHand)
     {
         if (item == null) return false;
 
         EquippableModule equipModule = item.itemDef.GetModule<EquippableModule>();
-        if (equipModule == null)
+        if (equipModule == null || equipModule.equipType != EquipmentType.Weapon)
         {
-            Debug.Log($"Item {item.itemDef.displayName} cannot be held in hands!");
+            Debug.Log($"[EquipmentManager] Item {item.itemDef.displayName} is not a weapon!");
             return false;
         }
 
@@ -50,99 +37,72 @@ public class EquipmentManager : MonoBehaviour
 
             rightHandSlot = item;
             leftHandSlot = item;
-
-            Debug.Log($"Equipped two-handed: {item.itemDef.displayName}");
             return true;
         }
 
         if (toRightHand)
         {
-            if (rightHandSlot != null && rightHandSlot.itemDef.GetModule<EquippableModule>()?.isTwoHanded == true)
-            {
-                DropItemOnGround(rightHandSlot);
-                leftHandSlot = null;
-            }
-            else if (rightHandSlot != null)
-            {
-                DropItemOnGround(rightHandSlot);
-            }
-
+            if (rightHandSlot != null) DropItemOnGround(rightHandSlot);
             rightHandSlot = item;
-            Debug.Log($"Right hand equipped: {item.itemDef.displayName}");
         }
         else
         {
-            if (leftHandSlot != null && leftHandSlot.itemDef.GetModule<EquippableModule>()?.isTwoHanded == true)
-            {
-                DropItemOnGround(leftHandSlot);
-                rightHandSlot = null;
-            }
-            else if (leftHandSlot != null)
-            {
-                DropItemOnGround(leftHandSlot);
-            }
-
+            if (leftHandSlot != null) DropItemOnGround(leftHandSlot);
             leftHandSlot = item;
-            Debug.Log($"Left hand equipped: {item.itemDef.displayName}");
         }
 
         return true;
     }
 
-    public void EquipPants(ItemInstance pantsItem)
+    public bool EquipPants(ItemInstance pantsItem)
     {
-        if (pantsItem == null) return;
+        if (pantsItem == null) return false;
+
+        EquippableModule equipModule = pantsItem.itemDef.GetModule<EquippableModule>();
+        if (equipModule == null || equipModule.equipType != EquipmentType.Pants) return false;
 
         ContainerModule container = pantsItem.itemDef.GetModule<ContainerModule>();
-        if (container == null)
-        {
-            Debug.Log($"Item {pantsItem.itemDef.displayName} has no pockets.");
-            return;
-        }
+        if (container == null) return false;
 
         pantsSlot = pantsItem;
         activePantsGrids.Clear();
 
         foreach (PocketDefinition pocket in container.pockets)
         {
-            InventoryGrid newGrid = new InventoryGrid(pocket.width, pocket.height);
-            activePantsGrids.Add(newGrid);
-
-            Debug.Log($"Created logical pocket in memory: ({pocket.width}x{pocket.height})");
+            activePantsGrids.Add(new InventoryGrid(pocket.width, pocket.height));
         }
+        return true;
     }
 
-    public void EquipBelt(ItemInstance beltItem)
+    public bool EquipBelt(ItemInstance beltItem)
     {
-        if (beltItem == null) return;
+        if (beltItem == null) return false;
+
+        EquippableModule equipModule = beltItem.itemDef.GetModule<EquippableModule>();
+        if (equipModule == null || equipModule.equipType != EquipmentType.Belt) return false;
 
         beltSlot = beltItem;
-        Debug.Log($"Equipped belt/accessory: {beltItem.itemDef.displayName}");
+        return true;
     }
 
-    public void EquipBackpack(ItemInstance backpackItem)
+    public bool EquipBackpack(ItemInstance backpackItem)
     {
-        if (backpackItem == null) return;
+        if (backpackItem == null) return false;
+
+        EquippableModule equipModule = backpackItem.itemDef.GetModule<EquippableModule>();
+        if (equipModule == null || equipModule.equipType != EquipmentType.Backpack) return false;
+
+        ContainerModule container = backpackItem.itemDef.GetModule<ContainerModule>();
+        if (container == null) return false;
 
         backpackSlot = backpackItem;
         activeBackpackGrids.Clear();
 
-        ContainerModule container = backpackItem.itemDef.GetModule<ContainerModule>();
-        if (container == null)
-        {
-            Debug.Log($"Item {backpackItem.itemDef.displayName} has no pockets.");
-            return;
-        }
-
         foreach (PocketDefinition pocket in container.pockets)
         {
-            InventoryGrid newGrid = new InventoryGrid(pocket.width, pocket.height);
-            activeBackpackGrids.Add(newGrid);
-
-            Debug.Log($"Created logical pocket in memory:({pocket.width}x{pocket.height})");
+            activeBackpackGrids.Add(new InventoryGrid(pocket.width, pocket.height));
         }
-
-        Debug.Log($"Equipped backpack: {backpackItem.itemDef.displayName}");
+        return true;
     }
 
     public void DropItemOnGround(ItemInstance item)
@@ -150,7 +110,6 @@ public class EquipmentManager : MonoBehaviour
         if (item == null || worldItemPrefab == null || playerTransform == null) return;
 
         Vector3 dropOffset = new Vector3(Random.Range(-0.5f, 0.5f), Random.Range(-0.5f, 0.5f), 0);
-
         GameObject droppedObj = Instantiate(worldItemPrefab, playerTransform.position + dropOffset, Quaternion.identity);
 
         WorldItem worldItem = droppedObj.GetComponent<WorldItem>();
@@ -158,16 +117,8 @@ public class EquipmentManager : MonoBehaviour
         {
             worldItem.Setup(item);
         }
-
-        Debug.Log($"Dropped physical item on ground: {item.itemDef.displayName}");
     }
 
-    public List<InventoryGrid> GetActivePantsGrids()
-    {
-        return activePantsGrids;
-    }
-    public List<InventoryGrid> GetActiveBackpackGrids()
-    {
-        return activeBackpackGrids;
-    }
+    public List<InventoryGrid> GetActivePantsGrids() { return activePantsGrids; }
+    public List<InventoryGrid> GetActiveBackpackGrids() { return activeBackpackGrids; }
 }

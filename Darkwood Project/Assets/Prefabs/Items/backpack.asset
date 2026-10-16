@@ -35,16 +35,14 @@ MonoBehaviour:
       type: {class: ContainerModule, ns: , asm: Assembly-CSharp}
       data:
         pockets:
-        - pocketName: Small Left Pocket
-          width: 2
+        - width: 2
           height: 3
-        - pocketName: Main Pocket
-          width: 4
+        - width: 4
           height: 4
-        - pocketName: Right Small Pocket
-          width: 2
+        - width: 2
           height: 3
     - rid: 2389293002865770497
       type: {class: EquippableModule, ns: , asm: Assembly-CSharp}
       data:
+        equipType: 3
         isTwoHanded: 0

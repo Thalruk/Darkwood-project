@@ -33,22 +33,14 @@ public class DropZoneUI : MonoBehaviour, IDropHandler, IPointerEnterHandler, IPo
             DraggableItem droppedItem = eventData.pointerDrag.GetComponent<DraggableItem>();
             if (droppedItem != null)
             {
-                if (droppedItem.itemInstance.worldLink != null)
+                if (droppedItem.itemInstance.worldLink == null)
                 {
-                    Debug.Log($"[DropZoneUI] {droppedItem.itemInstance.itemDef.displayName} is already on the ground.");
-                }
-                else
-                {
-                    if (InventoryUI.Instance != null && InventoryUI.Instance.equipmentManager != null)
-                    {
-                        InventoryUI.Instance.equipmentManager.DropItemOnGround(droppedItem.itemInstance);
-                    }
+                    InventoryUI.Instance.equipmentManager.DropItemOnGround(droppedItem.itemInstance);
                 }
 
                 if (droppedItem.currentSlot != null)
                 {
                     droppedItem.currentSlot.parentPocket.logicGrid.RemoveItem(droppedItem.itemInstance);
-                    droppedItem.currentSlot.parentPocket.RefreshEntireGrid();
                 }
 
                 if (droppedItem.currentEquipmentSlot != null)
@@ -57,6 +49,8 @@ public class DropZoneUI : MonoBehaviour, IDropHandler, IPointerEnterHandler, IPo
                 }
 
                 Destroy(droppedItem.gameObject);
+
+                InventoryUI.Instance.RefreshUI();
             }
         }
     }

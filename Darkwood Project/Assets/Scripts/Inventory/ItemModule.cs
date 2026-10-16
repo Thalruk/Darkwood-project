@@ -1,6 +1,16 @@
 using System;
 using System.Collections.Generic;
 
+public enum EquipmentType
+{
+    Weapon,
+    Head,
+    Body,
+    Backpack,
+    Belt,
+    Pants
+}
+
 [Serializable]
 public abstract class ItemModule { }
 
@@ -20,6 +30,7 @@ public class WeaponModule : ItemModule
 [Serializable]
 public class EquippableModule : ItemModule
 {
+    public EquipmentType equipType = EquipmentType.Weapon;
     public bool isTwoHanded = false;
 }
 

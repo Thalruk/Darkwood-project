@@ -1,9 +1,14 @@
+using System;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 public class DraggableItem : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler
 {
+    // --- NOWE EVENTY ---
+    public static event Action<ItemInstance> OnItemDragStart;
+    public static event Action OnItemDragEnd;
+
     [Header("Memory Reference")]
     public ItemInstance itemInstance;
 
@@ -47,10 +52,13 @@ public class DraggableItem : MonoBehaviour, IBeginDragHandler, IDragHandler, IEn
 
         if (currentEquipmentSlot != null)
         {
+            RectTransform slotRect = currentEquipmentSlot.GetComponent<RectTransform>();
+            float equipSize = slotRect != null ? slotRect.rect.width : 128f;
+
             visualRect.anchorMin = new Vector2(0.5f, 0.5f);
             visualRect.anchorMax = new Vector2(0.5f, 0.5f);
             visualRect.pivot = new Vector2(0.5f, 0.5f);
-            visualRect.sizeDelta = new Vector2(cellSize * 0.9f, cellSize * 0.9f);
+            visualRect.sizeDelta = new Vector2(equipSize * 0.9f, equipSize * 0.9f);
             visualRect.anchoredPosition = Vector2.zero;
         }
         else
@@ -98,6 +106,8 @@ public class DraggableItem : MonoBehaviour, IBeginDragHandler, IDragHandler, IEn
         {
             currentSlot.parentPocket.logicGrid.RemoveItem(itemInstance);
         }
+
+        OnItemDragStart?.Invoke(itemInstance);
     }
 
     public void OnDrag(PointerEventData eventData)
@@ -107,6 +117,8 @@ public class DraggableItem : MonoBehaviour, IBeginDragHandler, IDragHandler, IEn
 
     public void OnEndDrag(PointerEventData eventData)
     {
+        OnItemDragEnd?.Invoke();
+
         if (this == null || gameObject == null) return;
 
         rootImage.raycastTarget = true;
@@ -128,8 +140,16 @@ public class DraggableItem : MonoBehaviour, IBeginDragHandler, IDragHandler, IEn
                 transform.SetParent(fallbackParent);
                 transform.position = fallbackPosition;
                 transform.SetAsLastSibling();
-                Debug.Log($"[DraggableItem] Invalid drop, returning {itemInstance.itemDef.displayName} to previous spot.");
             }
+        }
+    }
+
+    private void OnDestroy()
+    {
+        if (currentlyDraggedItem == this)
+        {
+            OnItemDragEnd?.Invoke();
+            currentlyDraggedItem = null;
         }
     }
 }

@@ -24,11 +24,18 @@ MonoBehaviour:
   - {x: 2, y: 0}
   - {x: 1, y: 1}
   modules:
-  - rid: 2400048464726065152
+  - rid: 2389293018161086464
+  - rid: 2389293018161086465
   references:
     version: 2
     RefIds:
-    - rid: 2400048464726065152
-      type: {class: StackableModule, ns: , asm: Assembly-CSharp}
+    - rid: 2389293018161086464
+      type: {class: EquippableModule, ns: , asm: Assembly-CSharp}
       data:
-        maxStackSize: 30
+        equipType: 0
+        isTwoHanded: 1
+    - rid: 2389293018161086465
+      type: {class: WeaponModule, ns: , asm: Assembly-CSharp}
+      data:
+        baseDamage: 10
+        fireRate: 0.5
