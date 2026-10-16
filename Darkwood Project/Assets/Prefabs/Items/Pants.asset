@@ -15,6 +15,9 @@ MonoBehaviour:
   itemID: 1
   displayName: Pants
   icon: {fileID: 0}
+  shapeWidth: 1
+  shapeHeight: 1
+  shapeGrid: 01
   gridShape:
   - {x: 0, y: 0}
   modules:
@@ -27,12 +30,10 @@ MonoBehaviour:
       type: {class: ContainerModule, ns: , asm: Assembly-CSharp}
       data:
         pockets:
-        - pocketName: left pocket
-          width: 3
-          height: 3
-        - pocketName: right pocket
-          width: 1
-          height: 1
+        - width: 2
+          height: 2
+        - width: 2
+          height: 2
     - rid: 2400048488678686721
       type: {class: EquippableModule, ns: , asm: Assembly-CSharp}
       data:

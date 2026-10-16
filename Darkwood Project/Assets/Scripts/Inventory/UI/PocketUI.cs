@@ -1,11 +1,9 @@
 using System.Collections.Generic;
-using TMPro;
 using UnityEngine;
 
 public class PocketUI : MonoBehaviour
 {
     [Header("Prefab References")]
-    public TextMeshProUGUI titleText;
     public Transform gridContainer;
 
     public InventoryGrid logicGrid;
@@ -15,11 +13,6 @@ public class PocketUI : MonoBehaviour
     {
         logicGrid = grid;
         uiSlots = slots;
-
-        if (titleText != null)
-        {
-            titleText.text = logicGrid.PocketName;
-        }
     }
 
     public void RefreshEntireGrid()

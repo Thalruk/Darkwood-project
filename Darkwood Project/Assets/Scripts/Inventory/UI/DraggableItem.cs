@@ -8,7 +8,7 @@ public class DraggableItem : MonoBehaviour, IBeginDragHandler, IDragHandler, IEn
     public ItemInstance itemInstance;
 
     [Header("Visualization Settings")]
-    public float cellSize = 64f;
+    public float cellSize = 64;
     public float spacing = 2f;
 
     [HideInInspector] public GridSlotUI currentSlot;
@@ -41,24 +41,35 @@ public class DraggableItem : MonoBehaviour, IBeginDragHandler, IDragHandler, IEn
 
         if (itemInstance == null || itemInstance.itemDef == null) return;
 
-        GameObject visualObj = new GameObject("WeaponGraphic");
+        GameObject visualObj = new GameObject("ItemGraphic");
         visualObj.transform.SetParent(transform, false);
         RectTransform visualRect = visualObj.AddComponent<RectTransform>();
 
-        float fullWidth = (itemInstance.itemDef.shapeWidth * cellSize) + ((itemInstance.itemDef.shapeWidth - 1) * spacing);
-        float fullHeight = (itemInstance.itemDef.shapeHeight * cellSize) + ((itemInstance.itemDef.shapeHeight - 1) * spacing);
+        if (currentEquipmentSlot != null)
+        {
+            visualRect.anchorMin = new Vector2(0.5f, 0.5f);
+            visualRect.anchorMax = new Vector2(0.5f, 0.5f);
+            visualRect.pivot = new Vector2(0.5f, 0.5f);
+            visualRect.sizeDelta = new Vector2(cellSize * 0.9f, cellSize * 0.9f);
+            visualRect.anchoredPosition = Vector2.zero;
+        }
+        else
+        {
+            float fullWidth = (itemInstance.itemDef.shapeWidth * cellSize) + ((itemInstance.itemDef.shapeWidth - 1) * spacing);
+            float fullHeight = (itemInstance.itemDef.shapeHeight * cellSize) + ((itemInstance.itemDef.shapeHeight - 1) * spacing);
 
-        float scale = 0.9f;
-        float startX = -cellSize / 2f;
-        float startY = cellSize / 2f;
-        float marginX = (fullWidth - (fullWidth * scale)) / 2f;
-        float marginY = (fullHeight - (fullHeight * scale)) / 2f;
+            float scale = 0.9f;
+            float startX = -cellSize / 2f;
+            float startY = cellSize / 2f;
+            float marginX = (fullWidth - (fullWidth * scale)) / 2f;
+            float marginY = (fullHeight - (fullHeight * scale)) / 2f;
 
-        visualRect.anchorMin = new Vector2(0.5f, 0.5f);
-        visualRect.anchorMax = new Vector2(0.5f, 0.5f);
-        visualRect.pivot = new Vector2(0, 1);
-        visualRect.sizeDelta = new Vector2(fullWidth * scale, fullHeight * scale);
-        visualRect.anchoredPosition = new Vector2(startX + marginX, startY - marginY);
+            visualRect.anchorMin = new Vector2(0.5f, 0.5f);
+            visualRect.anchorMax = new Vector2(0.5f, 0.5f);
+            visualRect.pivot = new Vector2(0, 1);
+            visualRect.sizeDelta = new Vector2(fullWidth * scale, fullHeight * scale);
+            visualRect.anchoredPosition = new Vector2(startX + marginX, startY - marginY);
+        }
 
         Image visualImage = visualObj.AddComponent<Image>();
         visualImage.raycastTarget = false;

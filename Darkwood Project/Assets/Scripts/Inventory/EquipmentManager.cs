@@ -105,10 +105,10 @@ public class EquipmentManager : MonoBehaviour
 
         foreach (PocketDefinition pocket in container.pockets)
         {
-            InventoryGrid newGrid = new InventoryGrid(pocket.pocketName, pocket.width, pocket.height);
+            InventoryGrid newGrid = new InventoryGrid(pocket.width, pocket.height);
             activePantsGrids.Add(newGrid);
 
-            Debug.Log($"Created logical pocket in memory: {pocket.pocketName} ({pocket.width}x{pocket.height})");
+            Debug.Log($"Created logical pocket in memory: ({pocket.width}x{pocket.height})");
         }
     }
 
@@ -136,10 +136,10 @@ public class EquipmentManager : MonoBehaviour
 
         foreach (PocketDefinition pocket in container.pockets)
         {
-            InventoryGrid newGrid = new InventoryGrid(pocket.pocketName, pocket.width, pocket.height);
+            InventoryGrid newGrid = new InventoryGrid(pocket.width, pocket.height);
             activeBackpackGrids.Add(newGrid);
 
-            Debug.Log($"Created logical pocket in memory: {pocket.pocketName} ({pocket.width}x{pocket.height})");
+            Debug.Log($"Created logical pocket in memory:({pocket.width}x{pocket.height})");
         }
 
         Debug.Log($"Equipped backpack: {backpackItem.itemDef.displayName}");

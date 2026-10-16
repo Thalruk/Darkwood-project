@@ -2,15 +2,13 @@ using UnityEngine;
 
 public class InventoryGrid
 {
-    public string PocketName { get; private set; }
     public int Width { get; private set; }
     public int Height { get; private set; }
 
     private ItemInstance[,] grid;
 
-    public InventoryGrid(string name, int width, int height)
+    public InventoryGrid(int width, int height)
     {
-        PocketName = name;
         Width = width;
         Height = height;
         grid = new ItemInstance[width, height];

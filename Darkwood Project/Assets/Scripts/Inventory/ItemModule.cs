@@ -26,7 +26,6 @@ public class EquippableModule : ItemModule
 [Serializable]
 public class PocketDefinition
 {
-    public string pocketName = "Pocket";
     public int width = 2;
     public int height = 2;
 }

@@ -51,8 +51,8 @@ public class InventoryUI : MonoBehaviour
 
     public void RefreshUI()
     {
-        foreach (Transform child in pocketsContainer) Destroy(child.gameObject);
-        if (lootContainer != null) foreach (Transform child in lootContainer) Destroy(child.gameObject);
+        ClearContainer(pocketsContainer);
+        if (lootContainer != null) ClearContainer(lootContainer);
 
         var activePantsGrids = equipmentManager.GetActivePantsGrids();
         if (activePantsGrids.Count > 0 && containerGroupPrefab != null)
@@ -80,7 +80,6 @@ public class InventoryUI : MonoBehaviour
             }
         }
 
-
         if (lootContainer != null && equipmentManager.playerTransform != null)
         {
             Collider2D[] hits = Physics2D.OverlapCircleAll(equipmentManager.playerTransform.position, scanRadius);
@@ -89,14 +88,12 @@ public class InventoryUI : MonoBehaviour
             {
                 Debug.Log($"[InventoryUI] Scanned {hits.Length} items on the ground.");
 
-                float availableWidth = leftPanelBounds.rect.width - 20f;
+                float availableWidth = leftPanelBounds.rect.width - 36f;
 
                 int dynamicColumns = Mathf.FloorToInt(availableWidth / 66f);
                 if (dynamicColumns < 1) dynamicColumns = 1;
 
-                Debug.Log($"[InventoryUI] Dynamic grid generated: {dynamicColumns} columns based on {availableWidth}px width.");
-
-                InventoryGrid vicinityGrid = new InventoryGrid("Ground", dynamicColumns, 40);
+                InventoryGrid vicinityGrid = new InventoryGrid(dynamicColumns, 40);
 
                 foreach (Collider2D hit in hits)
                 {
@@ -123,6 +120,8 @@ public class InventoryUI : MonoBehaviour
         }
 
         Canvas.ForceUpdateCanvases();
+        if (pocketsContainer is RectTransform pocketsRect) RebuildLayoutBottomUp(pocketsRect);
+        if (lootContainer is RectTransform lootRect) RebuildLayoutBottomUp(lootRect);
 
         foreach (PocketUI pocketUI in pocketsContainer.GetComponentsInChildren<PocketUI>())
             pocketUI.SpawnSavedItems(draggableItemPrefab);
@@ -130,6 +129,29 @@ public class InventoryUI : MonoBehaviour
         if (lootContainer != null)
             foreach (PocketUI pocketUI in lootContainer.GetComponentsInChildren<PocketUI>())
                 pocketUI.SpawnSavedItems(draggableItemPrefab);
+    }
+
+    private void ClearContainer(Transform container)
+    {
+        for (int i = container.childCount - 1; i >= 0; i--)
+        {
+            Transform child = container.GetChild(i);
+            child.SetParent(null);
+            child.gameObject.SetActive(false);
+            Destroy(child.gameObject);
+        }
+    }
+
+    private void RebuildLayoutBottomUp(RectTransform root)
+    {
+        if (root == null) return;
+
+        foreach (RectTransform child in root)
+        {
+            RebuildLayoutBottomUp(child);
+        }
+
+        LayoutRebuilder.ForceRebuildLayoutImmediate(root);
     }
 
     private void CreatePocketUI(InventoryGrid logicGrid, Transform container)
