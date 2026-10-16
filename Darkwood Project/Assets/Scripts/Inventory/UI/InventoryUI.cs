@@ -59,12 +59,16 @@ public class InventoryUI : MonoBehaviour
         {
             GameObject pantsGroupObj = Instantiate(containerGroupPrefab, pocketsContainer);
             ContainerGroupUI pantsGroupUI = pantsGroupObj.GetComponent<ContainerGroupUI>();
-            pantsGroupUI.Initialize("Pants");
 
-            foreach (InventoryGrid logicGrid in activePantsGrids)
+            if (pantsGroupUI != null)
             {
-                CreatePocketUI(logicGrid, pantsGroupUI.pocketsContainer);
+                pantsGroupUI.Initialize("Pants");
+                foreach (InventoryGrid logicGrid in activePantsGrids)
+                {
+                    CreatePocketUI(logicGrid, pantsGroupUI.pocketsContainer);
+                }
             }
+            else Debug.LogError("[InventoryUI] BŁĄD: Twój prefab 'ContainerGroupPrefab' nie ma podpiętego skryptu ContainerGroupUI!");
         }
 
         var activeBackpackGrids = equipmentManager.GetActiveBackpackGrids();
@@ -72,12 +76,16 @@ public class InventoryUI : MonoBehaviour
         {
             GameObject backpackGroupObj = Instantiate(containerGroupPrefab, pocketsContainer);
             ContainerGroupUI backpackGroupUI = backpackGroupObj.GetComponent<ContainerGroupUI>();
-            backpackGroupUI.Initialize("Backpack");
 
-            foreach (InventoryGrid logicGrid in activeBackpackGrids)
+            if (backpackGroupUI != null)
             {
-                CreatePocketUI(logicGrid, backpackGroupUI.pocketsContainer);
+                backpackGroupUI.Initialize("Backpack");
+                foreach (InventoryGrid logicGrid in activeBackpackGrids)
+                {
+                    CreatePocketUI(logicGrid, backpackGroupUI.pocketsContainer);
+                }
             }
+            else Debug.LogError("[InventoryUI] BŁĄD: Twój prefab 'ContainerGroupPrefab' nie ma podpiętego skryptu ContainerGroupUI!");
         }
 
         if (lootContainer != null && equipmentManager.playerTransform != null)
@@ -86,10 +94,7 @@ public class InventoryUI : MonoBehaviour
 
             if (hits.Length > 0)
             {
-                Debug.Log($"[InventoryUI] Scanned {hits.Length} items on the ground.");
-
-                float availableWidth = leftPanelBounds.rect.width - 36f;
-
+                float availableWidth = leftPanelBounds != null ? leftPanelBounds.rect.width - 36f : 300f;
                 int dynamicColumns = Mathf.FloorToInt(availableWidth / 66f);
                 if (dynamicColumns < 1) dynamicColumns = 1;
 
@@ -98,7 +103,7 @@ public class InventoryUI : MonoBehaviour
                 foreach (Collider2D hit in hits)
                 {
                     WorldItem worldItem = hit.GetComponent<WorldItem>();
-                    if (worldItem != null && worldItem.itemInstance != null)
+                    if (worldItem != null && worldItem.itemInstance != null && worldItem.itemInstance.itemDef != null)
                     {
                         worldItem.itemInstance.worldLink = worldItem;
 
@@ -112,7 +117,7 @@ public class InventoryUI : MonoBehaviour
                             }
                         }
 
-                        if (!placed) Debug.LogWarning($"[InventoryUI] Vicinity grid is full! Cannot show {worldItem.itemInstance.itemDef.displayName}");
+                        if (!placed) Debug.LogWarning($"[InventoryUI] Siatka ziemi pełna! Nie można pokazać: {worldItem.itemInstance.itemDef.displayName}");
                     }
                 }
                 CreatePocketUI(vicinityGrid, lootContainer);
@@ -133,6 +138,7 @@ public class InventoryUI : MonoBehaviour
 
     private void ClearContainer(Transform container)
     {
+        if (container == null) return;
         for (int i = container.childCount - 1; i >= 0; i--)
         {
             Transform child = container.GetChild(i);
@@ -145,23 +151,40 @@ public class InventoryUI : MonoBehaviour
     private void RebuildLayoutBottomUp(RectTransform root)
     {
         if (root == null) return;
-
-        foreach (RectTransform child in root)
-        {
-            RebuildLayoutBottomUp(child);
-        }
-
+        foreach (RectTransform child in root) RebuildLayoutBottomUp(child);
         LayoutRebuilder.ForceRebuildLayoutImmediate(root);
     }
 
     private void CreatePocketUI(InventoryGrid logicGrid, Transform container)
     {
+        if (container == null)
+        {
+            Debug.LogError("[InventoryUI] BŁĄD: 'pocketsContainer' nie jest podpięty wewnątrz skryptu w ContainerGroupPrefab!");
+            return;
+        }
+
         GameObject newPocketObj = Instantiate(pocketPrefab, container);
         PocketUI pocketUI = newPocketObj.GetComponent<PocketUI>();
 
+        if (pocketUI == null)
+        {
+            Debug.LogError("[InventoryUI] BŁĄD: Twój prefab 'PocketPrefab' nie ma przypisanego skryptu PocketUI!");
+            return;
+        }
+
+        if (pocketUI.gridContainer == null)
+        {
+            Debug.LogError("[InventoryUI] BŁĄD: 'gridContainer' nie jest podpięty wewnątrz skryptu w PocketPrefab!");
+            return;
+        }
+
         GridLayoutGroup layout = pocketUI.gridContainer.GetComponent<GridLayoutGroup>();
-        layout.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
-        layout.constraintCount = logicGrid.Width;
+        if (layout != null)
+        {
+            layout.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
+            layout.constraintCount = logicGrid.Width;
+        }
+        else Debug.LogError("[InventoryUI] BŁĄD: Brakuje komponentu GridLayoutGroup wewnątrz GridContainer w PocketPrefab!");
 
         GridSlotUI[,] uiSlots = new GridSlotUI[logicGrid.Width, logicGrid.Height];
 

@@ -62,7 +62,7 @@ public class EquipmentSlotUI : MonoBehaviour, IDropHandler
 
     private bool CanAcceptItem(ItemInstance item)
     {
-        if (item == null) return false;
+        if (item == null || item.itemDef == null) return false;
 
         EquippableModule equipModule = item.itemDef.GetModule<EquippableModule>();
         if (equipModule == null) return false;
@@ -103,7 +103,7 @@ public class EquipmentSlotUI : MonoBehaviour, IDropHandler
             case SlotType.Backpack: itemToSpawn = InventoryUI.Instance.equipmentManager.backpackSlot; break;
         }
 
-        if (itemToSpawn != null)
+        if (itemToSpawn != null && itemToSpawn.itemDef != null)
         {
             GameObject itemObj = Instantiate(draggableItemPrefab, transform);
             DraggableItem dragScript = itemObj.GetComponent<DraggableItem>();
@@ -129,12 +129,12 @@ public class EquipmentSlotUI : MonoBehaviour, IDropHandler
             case SlotType.LeftHand: InventoryUI.Instance.equipmentManager.leftHandSlot = null; break;
             case SlotType.Belt: InventoryUI.Instance.equipmentManager.beltSlot = null; break;
             case SlotType.Pants:
+                InventoryUI.Instance.equipmentManager.SpillAndClearGrids(InventoryUI.Instance.equipmentManager.GetActivePantsGrids());
                 InventoryUI.Instance.equipmentManager.pantsSlot = null;
-                InventoryUI.Instance.equipmentManager.GetActivePantsGrids().Clear();
                 break;
             case SlotType.Backpack:
+                InventoryUI.Instance.equipmentManager.SpillAndClearGrids(InventoryUI.Instance.equipmentManager.GetActiveBackpackGrids());
                 InventoryUI.Instance.equipmentManager.backpackSlot = null;
-                InventoryUI.Instance.equipmentManager.GetActiveBackpackGrids().Clear();
                 break;
         }
     }
@@ -171,6 +171,11 @@ public class EquipmentSlotUI : MonoBehaviour, IDropHandler
 
                     if (droppedItem.itemInstance.worldLink != null)
                     {
+                        // WYMUSZONE OŚLEPIENIE SKANERA: 
+                        // Wyłączamy wszystkie collidery w modelu, by fizyka nie widziała go podczas niszczenia.
+                        Collider2D[] cols = droppedItem.itemInstance.worldLink.GetComponentsInChildren<Collider2D>();
+                        foreach (Collider2D c in cols) c.enabled = false;
+
                         Destroy(droppedItem.itemInstance.worldLink.gameObject);
                         droppedItem.itemInstance.worldLink = null;
                     }

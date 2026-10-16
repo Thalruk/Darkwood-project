@@ -18,7 +18,8 @@ public class InventoryGrid
 
     public bool CanPlaceItem(ItemInstance item, int startX, int startY)
     {
-        if (item == null || item.itemDef.gridShape == null) return false;
+        if (item == null || item.itemDef == null || item.itemDef.gridShape == null) return false;
+        if (grid == null) return false;
 
         foreach (Vector2Int shapePos in item.itemDef.gridShape)
         {
@@ -31,7 +32,6 @@ public class InventoryGrid
 
         return true;
     }
-
     public bool TryPlaceItem(ItemInstance item, int startX, int startY)
     {
         if (!CanPlaceItem(item, startX, startY)) return false;
