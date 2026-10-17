@@ -53,7 +53,10 @@ public class InventoryUI : MonoBehaviour
     public void RefreshUI()
     {
         ClearContainer(pocketsContainer);
-        if (lootContainer != null) ClearContainer(lootContainer);
+        if (lootContainer != null)
+        {
+            ClearContainer(lootContainer);
+        }
 
         BuildPocketGroup("Pants", equipmentManager.GetActivePantsGrids());
         BuildPocketGroup("Backpack", equipmentManager.GetActiveBackpackGrids());
@@ -66,7 +69,10 @@ public class InventoryUI : MonoBehaviour
             {
                 float availableWidth = leftPanelBounds != null ? leftPanelBounds.rect.width - 36f : 300f;
                 int dynamicColumns = Mathf.FloorToInt(availableWidth / 66f);
-                if (dynamicColumns < 1) dynamicColumns = 1;
+                if (dynamicColumns < 1)
+                {
+                    dynamicColumns = 1;
+                }
 
                 InventoryGrid vicinityGrid = new InventoryGrid(dynamicColumns, 40, true);
 
@@ -83,11 +89,16 @@ public class InventoryUI : MonoBehaviour
                             for (int x = 0; x < vicinityGrid.Width && !placed; x++)
                             {
                                 if (vicinityGrid.TryPlaceItem(worldItem.itemInstance, x, y))
+                                {
                                     placed = true;
+                                }
                             }
                         }
 
-                        if (!placed) Debug.LogWarning($"[InventoryUI] Siatka ziemi pełna! Nie można pokazać: {worldItem.itemInstance.itemDef.displayName}");
+                        if (!placed)
+                        {
+                            Debug.LogWarning($"[InventoryUI] Vicinity grid is full! Cannot show: {worldItem.itemInstance.itemDef.displayName}");
+                        }
                     }
                 }
                 CreatePocketUI(vicinityGrid, lootContainer);
@@ -95,15 +106,35 @@ public class InventoryUI : MonoBehaviour
         }
 
         Canvas.ForceUpdateCanvases();
-        if (pocketsContainer is RectTransform pocketsRect) RebuildLayoutBottomUp(pocketsRect);
-        if (lootContainer is RectTransform lootRect) RebuildLayoutBottomUp(lootRect);
+        if (pocketsContainer is RectTransform pocketsRect)
+        {
+            RebuildLayoutBottomUp(pocketsRect);
+        }
+        if (lootContainer is RectTransform lootRect)
+        {
+            RebuildLayoutBottomUp(lootRect);
+        }
 
         foreach (PocketUI pocketUI in pocketsContainer.GetComponentsInChildren<PocketUI>())
+        {
             pocketUI.SpawnSavedItems(draggableItemPrefab);
+        }
 
         if (lootContainer != null)
+        {
             foreach (PocketUI pocketUI in lootContainer.GetComponentsInChildren<PocketUI>())
+            {
                 pocketUI.SpawnSavedItems(draggableItemPrefab);
+            }
+        }
+
+        if (inventoryWindow != null)
+        {
+            foreach (EquipmentSlotUI equipSlot in inventoryWindow.GetComponentsInChildren<EquipmentSlotUI>(true))
+            {
+                equipSlot.RefreshSlot();
+            }
+        }
     }
 
     private void ClearContainer(Transform container)

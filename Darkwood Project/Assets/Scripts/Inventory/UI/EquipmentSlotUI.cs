@@ -112,11 +112,7 @@ public class EquipmentSlotUI : MonoBehaviour, IDropHandler
             dragScript.currentSlot = null;
             dragScript.currentEquipmentSlot = this;
 
-            RectTransform rect = itemObj.GetComponent<RectTransform>();
-            rect.anchorMin = new Vector2(0.5f, 0.5f);
-            rect.anchorMax = new Vector2(0.5f, 0.5f);
-            rect.pivot = new Vector2(0.5f, 0.5f);
-            rect.anchoredPosition = Vector2.zero;
+            dragScript.BuildVisualShape();
         }
     }
 

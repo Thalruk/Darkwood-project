@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 public class InventoryGrid
@@ -7,6 +8,7 @@ public class InventoryGrid
     public bool IsGround { get; private set; }
 
     private ItemInstance[,] grid;
+    private Dictionary<ItemInstance, Vector2Int> itemOrigins = new Dictionary<ItemInstance, Vector2Int>();
 
     public InventoryGrid(int width, int height, bool isGround = false)
     {
@@ -42,12 +44,16 @@ public class InventoryGrid
             int targetY = startY + shapePos.y;
             grid[targetX, targetY] = item;
         }
+
+        itemOrigins[item] = new Vector2Int(startX, startY);
         return true;
     }
 
     public void RemoveItem(ItemInstance item)
     {
         if (item == null) return;
+
+        itemOrigins.Remove(item);
 
         for (int x = 0; x < Width; x++)
         {
@@ -59,6 +65,11 @@ public class InventoryGrid
                 }
             }
         }
+    }
+
+    public Vector2Int GetItemOrigin(ItemInstance item)
+    {
+        return itemOrigins.TryGetValue(item, out Vector2Int origin) ? origin : Vector2Int.zero;
     }
 
     public ItemInstance GetItemAt(int x, int y)

@@ -41,33 +41,71 @@ public class EquipmentManager : MonoBehaviour
 
         foreach (ItemInstance item in itemsToDrop)
         {
-            Debug.Log($"[EquipmentManager] Spilled {item.itemDef.displayName} to the ground.");
             DropItemOnGround(item);
         }
 
         grids.Clear();
     }
-    private bool HasValidItem(ItemInstance item)
+
+    public bool HasValidItem(ItemInstance item)
     {
         return item != null && item.itemDef != null;
     }
+
+    public bool TryStoreInPockets(ItemInstance item)
+    {
+        foreach (InventoryGrid grid in activeBackpackGrids)
+        {
+            for (int y = 0; y < grid.Height; y++)
+            {
+                for (int x = 0; x < grid.Width; x++)
+                {
+                    if (grid.TryPlaceItem(item, x, y)) return true;
+                }
+            }
+        }
+
+        foreach (InventoryGrid grid in activePantsGrids)
+        {
+            for (int y = 0; y < grid.Height; y++)
+            {
+                for (int x = 0; x < grid.Width; x++)
+                {
+                    if (grid.TryPlaceItem(item, x, y)) return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    public void HandleUnequippedItem(ItemInstance item)
+    {
+        if (!HasValidItem(item)) return;
+
+        if (TryStoreInPockets(item))
+        {
+            Debug.Log($"[EquipmentManager] Automatycznie schowano {item.itemDef.displayName} do kieszeni.");
+            return;
+        }
+
+        Debug.Log($"[EquipmentManager] Brak miejsca! Wyrzucono {item.itemDef.displayName} na ziemię.");
+        DropItemOnGround(item);
+    }
+
     public bool TryEquip(ItemInstance item, bool toRightHand)
     {
         if (!HasValidItem(item)) return false;
 
         EquippableModule equipModule = item.itemDef.GetModule<EquippableModule>();
-        if (equipModule == null || equipModule.equipType != EquipmentType.Weapon)
-        {
-            Debug.Log($"[EquipmentManager] Item {item.itemDef.displayName} is not a weapon!");
-            return false;
-        }
+        if (equipModule == null || equipModule.equipType != EquipmentType.Weapon) return false;
 
         if (equipModule.isTwoHanded)
         {
             if (rightHandSlot == item && leftHandSlot == item) return true;
 
-            if (HasValidItem(rightHandSlot)) DropItemOnGround(rightHandSlot);
-            if (HasValidItem(leftHandSlot) && leftHandSlot != rightHandSlot) DropItemOnGround(leftHandSlot);
+            if (HasValidItem(rightHandSlot)) HandleUnequippedItem(rightHandSlot);
+            if (HasValidItem(leftHandSlot) && leftHandSlot != rightHandSlot) HandleUnequippedItem(leftHandSlot);
 
             rightHandSlot = item;
             leftHandSlot = item;
@@ -77,15 +115,13 @@ public class EquipmentManager : MonoBehaviour
         if (toRightHand)
         {
             if (rightHandSlot == item) return true;
-
-            if (HasValidItem(rightHandSlot)) DropItemOnGround(rightHandSlot);
+            if (HasValidItem(rightHandSlot)) HandleUnequippedItem(rightHandSlot);
             rightHandSlot = item;
         }
         else
         {
             if (leftHandSlot == item) return true;
-
-            if (HasValidItem(leftHandSlot)) DropItemOnGround(leftHandSlot);
+            if (HasValidItem(leftHandSlot)) HandleUnequippedItem(leftHandSlot);
             leftHandSlot = item;
         }
 
@@ -107,7 +143,7 @@ public class EquipmentManager : MonoBehaviour
         if (HasValidItem(pantsSlot))
         {
             SpillAndClearGrids(activePantsGrids);
-            DropItemOnGround(pantsSlot);
+            HandleUnequippedItem(pantsSlot);
         }
 
         pantsSlot = pantsItem;
@@ -129,7 +165,7 @@ public class EquipmentManager : MonoBehaviour
 
         if (beltSlot == beltItem) return true;
 
-        if (HasValidItem(beltSlot)) DropItemOnGround(beltSlot);
+        if (HasValidItem(beltSlot)) HandleUnequippedItem(beltSlot);
 
         beltSlot = beltItem;
         return true;
@@ -150,7 +186,7 @@ public class EquipmentManager : MonoBehaviour
         if (HasValidItem(backpackSlot))
         {
             SpillAndClearGrids(activeBackpackGrids);
-            DropItemOnGround(backpackSlot);
+            HandleUnequippedItem(backpackSlot);
         }
 
         backpackSlot = backpackItem;

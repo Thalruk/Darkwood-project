@@ -12,11 +12,12 @@ public class DraggableItem : MonoBehaviour, IBeginDragHandler, IDragHandler, IEn
     public ItemInstance itemInstance;
 
     [Header("Visualization Settings")]
-    public float cellSize = 64;
+    public float cellSize = 64f;
     public float spacing = 2f;
 
     [HideInInspector] public GridSlotUI currentSlot;
     [HideInInspector] public EquipmentSlotUI currentEquipmentSlot;
+    [HideInInspector] public Vector2Int grabbedCellOffset;
 
     private Transform fallbackParent;
     private Vector3 fallbackPosition;
@@ -29,54 +30,67 @@ public class DraggableItem : MonoBehaviour, IBeginDragHandler, IDragHandler, IEn
     {
         rootImage = GetComponent<Image>();
         LayoutElement le = gameObject.GetComponent<LayoutElement>();
-        if (le == null) le = gameObject.AddComponent<LayoutElement>();
+        if (le == null)
+        {
+            le = gameObject.AddComponent<LayoutElement>();
+        }
         le.ignoreLayout = true;
     }
 
-    private void Start() { BuildVisualShape(); }
-
-    private void BuildVisualShape()
+    public void BuildVisualShape()
     {
-        foreach (Transform child in transform) { Destroy(child.gameObject); }
+        if (rootImage == null)
+        {
+            rootImage = GetComponent<Image>();
+        }
+
+        foreach (Transform child in transform)
+        {
+            Destroy(child.gameObject);
+        }
 
         RectTransform rootRect = GetComponent<RectTransform>();
-        rootRect.sizeDelta = new Vector2(cellSize, cellSize);
-        rootRect.pivot = new Vector2(0.5f, 0.5f);
         rootImage.color = new Color(0, 0, 0, 0);
 
-        if (itemInstance == null || itemInstance.itemDef == null) return;
+        if (itemInstance == null || itemInstance.itemDef == null)
+        {
+            return;
+        }
 
         GameObject visualObj = new GameObject("ItemGraphic");
         visualObj.transform.SetParent(transform, false);
         RectTransform visualRect = visualObj.AddComponent<RectTransform>();
 
+        rootRect.anchorMin = new Vector2(0.5f, 0.5f);
+        rootRect.anchorMax = new Vector2(0.5f, 0.5f);
+        rootRect.pivot = new Vector2(0.5f, 0.5f);
+
+        visualRect.anchorMin = new Vector2(0.5f, 0.5f);
+        visualRect.anchorMax = new Vector2(0.5f, 0.5f);
+        visualRect.pivot = new Vector2(0.5f, 0.5f);
+
         if (currentEquipmentSlot != null)
         {
             RectTransform slotRect = currentEquipmentSlot.GetComponent<RectTransform>();
-            float equipSize = slotRect != null ? slotRect.rect.width : 128f;
+            float equipSize = (slotRect != null && slotRect.rect.width > 0) ? slotRect.rect.width : 128f;
 
-            visualRect.anchorMin = new Vector2(0.5f, 0.5f);
-            visualRect.anchorMax = new Vector2(0.5f, 0.5f);
-            visualRect.pivot = new Vector2(0.5f, 0.5f);
+            rootRect.sizeDelta = new Vector2(equipSize, equipSize);
+            rootRect.anchoredPosition = Vector2.zero;
+
             visualRect.sizeDelta = new Vector2(equipSize * 0.9f, equipSize * 0.9f);
             visualRect.anchoredPosition = Vector2.zero;
         }
         else
         {
-            float fullWidth = (itemInstance.itemDef.shapeWidth * cellSize) + ((itemInstance.itemDef.shapeWidth - 1) * spacing);
-            float fullHeight = (itemInstance.itemDef.shapeHeight * cellSize) + ((itemInstance.itemDef.shapeHeight - 1) * spacing);
+            Vector2Int dims = GetEffectiveDimensions();
+            float fullWidth = (dims.x * cellSize) + ((dims.x - 1) * spacing);
+            float fullHeight = (dims.y * cellSize) + ((dims.y - 1) * spacing);
+
+            rootRect.sizeDelta = new Vector2(fullWidth, fullHeight);
 
             float scale = 0.9f;
-            float startX = -cellSize / 2f;
-            float startY = cellSize / 2f;
-            float marginX = (fullWidth - (fullWidth * scale)) / 2f;
-            float marginY = (fullHeight - (fullHeight * scale)) / 2f;
-
-            visualRect.anchorMin = new Vector2(0.5f, 0.5f);
-            visualRect.anchorMax = new Vector2(0.5f, 0.5f);
-            visualRect.pivot = new Vector2(0, 1);
             visualRect.sizeDelta = new Vector2(fullWidth * scale, fullHeight * scale);
-            visualRect.anchoredPosition = new Vector2(startX + marginX, startY - marginY);
+            visualRect.anchoredPosition = Vector2.zero;
         }
 
         Image visualImage = visualObj.AddComponent<Image>();
@@ -87,21 +101,79 @@ public class DraggableItem : MonoBehaviour, IBeginDragHandler, IDragHandler, IEn
             visualImage.sprite = itemInstance.itemDef.icon;
             visualImage.preserveAspect = true;
         }
-        else { visualImage.color = new Color(0.9f, 0.4f, 0.4f, 0.8f); }
+        else
+        {
+            visualImage.color = new Color(0.9f, 0.4f, 0.4f, 0.8f);
+        }
     }
 
+    public Vector2Int GetEffectiveDimensions()
+    {
+        if (itemInstance == null || itemInstance.itemDef == null || itemInstance.itemDef.gridShape == null || itemInstance.itemDef.gridShape.Length == 0)
+        {
+            return Vector2Int.one;
+        }
+
+        int maxX = 0;
+        int maxY = 0;
+        foreach (Vector2Int pos in itemInstance.itemDef.gridShape)
+        {
+            if (pos.x > maxX) maxX = pos.x;
+            if (pos.y > maxY) maxY = pos.y;
+        }
+
+        return new Vector2Int(maxX + 1, maxY + 1);
+    }
     public void OnBeginDrag(PointerEventData eventData)
     {
-        if (eventData.button != PointerEventData.InputButton.Left) return;
+        if (eventData.button != PointerEventData.InputButton.Left)
+        {
+            return;
+        }
 
         currentlyDraggedItem = this;
         fallbackParent = transform.parent;
         fallbackPosition = transform.position;
 
-        dragOffset = transform.position - (Vector3)eventData.position;
+        RectTransform rectTransform = GetComponent<RectTransform>();
+
+        if (currentEquipmentSlot != null || currentSlot == null)
+        {
+            grabbedCellOffset = Vector2Int.zero;
+        }
+        else
+        {
+            RectTransformUtility.ScreenPointToLocalPointInRectangle(
+                rectTransform,
+                eventData.position,
+                eventData.pressEventCamera,
+                out Vector2 localMousePos
+            );
+
+            Vector2Int dims = GetEffectiveDimensions();
+            float fromLeft = localMousePos.x + (rectTransform.rect.width * 0.5f);
+            float fromTop = (rectTransform.rect.height * 0.5f) - localMousePos.y;
+
+            float step = cellSize + spacing;
+            int offsetX = Mathf.Clamp(Mathf.FloorToInt(fromLeft / step), 0, dims.x - 1);
+            int offsetY = Mathf.Clamp(Mathf.FloorToInt(fromTop / step), 0, dims.y - 1);
+
+            grabbedCellOffset = new Vector2Int(offsetX, offsetY);
+        }
 
         Canvas canvas = GetComponentInParent<Canvas>();
-        transform.SetParent(canvas != null ? canvas.transform : transform.root);
+        Transform rootTransform = canvas != null ? canvas.transform : transform.root;
+
+        RectTransformUtility.ScreenPointToWorldPointInRectangle(
+            rootTransform as RectTransform,
+            eventData.position,
+            eventData.pressEventCamera,
+            out Vector3 worldMousePos
+        );
+
+        dragOffset = transform.position - worldMousePos;
+
+        transform.SetParent(rootTransform);
         transform.SetAsLastSibling();
 
         rootImage.raycastTarget = false;
@@ -109,6 +181,7 @@ public class DraggableItem : MonoBehaviour, IBeginDragHandler, IDragHandler, IEn
         if (currentSlot != null)
         {
             currentSlot.parentPocket.logicGrid.RemoveItem(itemInstance);
+            currentSlot.parentPocket.RefreshEntireGrid();
         }
 
         OnItemDragStart?.Invoke(itemInstance);
@@ -116,18 +189,33 @@ public class DraggableItem : MonoBehaviour, IBeginDragHandler, IDragHandler, IEn
 
     public void OnDrag(PointerEventData eventData)
     {
-        if (eventData.button != PointerEventData.InputButton.Left) return;
+        if (eventData.button != PointerEventData.InputButton.Left)
+        {
+            return;
+        }
 
-        transform.position = (Vector3)eventData.position + dragOffset;
+        RectTransformUtility.ScreenPointToWorldPointInRectangle(
+            transform.parent as RectTransform,
+            eventData.position,
+            eventData.pressEventCamera,
+            out Vector3 worldPoint
+        );
+        transform.position = worldPoint + dragOffset;
     }
 
     public void OnEndDrag(PointerEventData eventData)
     {
-        if (eventData.button != PointerEventData.InputButton.Left) return;
+        if (eventData.button != PointerEventData.InputButton.Left)
+        {
+            return;
+        }
 
         OnItemDragEnd?.Invoke();
 
-        if (this == null || gameObject == null) return;
+        if (this == null || gameObject == null)
+        {
+            return;
+        }
 
         rootImage.raycastTarget = true;
         currentlyDraggedItem = null;
@@ -139,9 +227,15 @@ public class DraggableItem : MonoBehaviour, IBeginDragHandler, IDragHandler, IEn
         {
             if (currentSlot != null)
             {
+                currentSlot.parentPocket.logicGrid.TryPlaceItem(itemInstance, currentSlot.x, currentSlot.y);
                 transform.SetParent(currentSlot.transform.parent);
-                transform.position = currentSlot.transform.position;
+                transform.position = currentSlot.parentPocket.GetItemCenterPosition(
+                    itemInstance,
+                    currentSlot.x,
+                    currentSlot.y
+                );
                 transform.SetAsLastSibling();
+                currentSlot.parentPocket.RefreshEntireGrid();
             }
             else
             {
@@ -156,7 +250,65 @@ public class DraggableItem : MonoBehaviour, IBeginDragHandler, IDragHandler, IEn
     {
         if (eventData.button == PointerEventData.InputButton.Right)
         {
-            Debug.Log($"[DraggableItem] Prawy Przycisk Myszy kliknięty na: {itemInstance.itemDef.displayName}");
+            EquipmentManager em = InventoryUI.Instance.equipmentManager;
+
+            if (currentEquipmentSlot != null)
+            {
+                currentEquipmentSlot.ClearSlotMemory();
+                em.HandleUnequippedItem(itemInstance);
+
+                DestroyWorldLink();
+                Destroy(gameObject);
+                InventoryUI.Instance.RefreshUI();
+                return;
+            }
+
+            EquippableModule equipModule = itemInstance.itemDef.GetModule<EquippableModule>();
+            if (equipModule == null)
+            {
+                return;
+            }
+
+            bool success = false;
+            switch (equipModule.equipType)
+            {
+                case EquipmentType.Weapon:
+                    if (!em.HasValidItem(em.rightHandSlot))
+                    {
+                        success = em.TryEquip(itemInstance, true);
+                    }
+                    else if (!em.HasValidItem(em.leftHandSlot) && !equipModule.isTwoHanded)
+                    {
+                        success = em.TryEquip(itemInstance, false);
+                    }
+                    else
+                    {
+                        success = em.TryEquip(itemInstance, true);
+                    }
+                    break;
+
+                case EquipmentType.Pants:
+                    success = em.EquipPants(itemInstance);
+                    break;
+                case EquipmentType.Belt:
+                    success = em.EquipBelt(itemInstance);
+                    break;
+                case EquipmentType.Backpack:
+                    success = em.EquipBackpack(itemInstance);
+                    break;
+            }
+
+            if (success)
+            {
+                if (currentSlot != null)
+                {
+                    currentSlot.parentPocket.logicGrid.RemoveItem(itemInstance);
+                }
+
+                DestroyWorldLink();
+                Destroy(gameObject);
+                InventoryUI.Instance.RefreshUI();
+            }
         }
     }
 

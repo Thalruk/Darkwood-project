@@ -40,17 +40,45 @@ public class PocketUI : MonoBehaviour
                 {
                     alreadySpawned.Add(item);
 
+                    Vector2Int origin = logicGrid.GetItemOrigin(item);
+
                     GameObject itemObj = Instantiate(itemPrefab, gridContainer);
                     DraggableItem dragScript = itemObj.GetComponent<DraggableItem>();
 
                     dragScript.itemInstance = item;
-                    dragScript.currentSlot = uiSlots[x, y];
+                    dragScript.currentSlot = uiSlots[origin.x, origin.y];
+                    dragScript.currentEquipmentSlot = null;
 
-                    itemObj.transform.position = uiSlots[x, y].transform.position;
+                    dragScript.BuildVisualShape();
+                    itemObj.transform.position = GetItemCenterPosition(item, origin.x, origin.y);
                     itemObj.transform.SetAsLastSibling();
                 }
             }
         }
+    }
+
+    public Vector3 GetItemCenterPosition(ItemInstance item, int startX, int startY)
+    {
+        Vector3 min = new Vector3(float.MaxValue, float.MaxValue, float.MaxValue);
+        Vector3 max = new Vector3(float.MinValue, float.MinValue, float.MinValue);
+        Vector3[] corners = new Vector3[4];
+
+        // Sprawdzamy realne rogi każdego slotu wchodzącego w skład kształtu przedmiotu
+        foreach (Vector2Int shapePos in item.itemDef.gridShape)
+        {
+            int slotX = Mathf.Clamp(startX + shapePos.x, 0, logicGrid.Width - 1);
+            int slotY = Mathf.Clamp(startY + shapePos.y, 0, logicGrid.Height - 1);
+
+            RectTransform slotRect = uiSlots[slotX, slotY].GetComponent<RectTransform>();
+            slotRect.GetWorldCorners(corners);
+
+            // corners[0] to lewy dolny róg, corners[2] to prawy górny róg w przestrzeni świata
+            min = Vector3.Min(min, corners[0]);
+            max = Vector3.Max(max, corners[2]);
+        }
+
+        // Prawdziwy geometryczny środek wszystkich zajętych kratek
+        return (min + max) * 0.5f;
     }
 
     public void HighlightShape(ItemInstance item, int startX, int startY)
