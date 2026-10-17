@@ -57,6 +57,9 @@ public class PocketUI : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Calculates precise screen/world center position of an item across all its occupied slots.
+    /// </summary>
     public Vector3 GetItemCenterPosition(ItemInstance item, int startX, int startY)
     {
         Vector3 min = new Vector3(float.MaxValue, float.MaxValue, float.MaxValue);

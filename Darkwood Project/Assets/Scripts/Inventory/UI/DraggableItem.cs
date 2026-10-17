@@ -59,7 +59,6 @@ public class DraggableItem : MonoBehaviour, IBeginDragHandler, IDragHandler, IEn
             slot.parentPocket.ClearHighlight(itemInstance, slot.x - grabbedCellOffset.x, slot.y - grabbedCellOffset.y);
         }
 
-        // Obrót o kolejne 90 stopni (0 -> 1 -> 2 -> 3 -> 0)
         itemInstance.RotateClockwise();
         BuildVisualShape();
 
@@ -154,8 +153,6 @@ public class DraggableItem : MonoBehaviour, IBeginDragHandler, IDragHandler, IEn
             float scale = 0.9f;
             visualRect.sizeDelta = new Vector2(baseWidth * scale, baseHeight * scale);
             visualRect.anchoredPosition = Vector2.zero;
-
-            // Obracamy grafikę wielokrotnością -90 stopni (0°, -90°, -180°, -270°)
             visualRect.localEulerAngles = new Vector3(0f, 0f, -90f * itemInstance.rotationStep);
         }
 
@@ -286,11 +283,7 @@ public class DraggableItem : MonoBehaviour, IBeginDragHandler, IDragHandler, IEn
             {
                 currentSlot.parentPocket.logicGrid.TryPlaceItem(itemInstance, currentSlot.x, currentSlot.y);
                 transform.SetParent(currentSlot.transform.parent);
-                transform.position = currentSlot.parentPocket.GetItemCenterPosition(
-                    itemInstance,
-                    currentSlot.x,
-                    currentSlot.y
-                );
+                transform.position = currentSlot.parentPocket.GetItemCenterPosition(itemInstance, currentSlot.x, currentSlot.y);
                 transform.SetAsLastSibling();
                 currentSlot.parentPocket.RefreshEntireGrid();
             }

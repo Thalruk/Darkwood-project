@@ -18,6 +18,9 @@ public class InventoryGrid
         grid = new ItemInstance[width, height];
     }
 
+    /// <summary>
+    /// Checks if an item can be placed at given coordinates without overlapping or going out of bounds.
+    /// </summary>
     public bool CanPlaceItem(ItemInstance item, int startX, int startY)
     {
         if (item == null || item.itemDef == null || item.itemDef.gridShape == null)
@@ -47,6 +50,9 @@ public class InventoryGrid
         return true;
     }
 
+    /// <summary>
+    /// Places an item on the grid and registers its origin coordinates.
+    /// </summary>
     public bool TryPlaceItem(ItemInstance item, int startX, int startY)
     {
         if (!CanPlaceItem(item, startX, startY))
@@ -65,9 +71,15 @@ public class InventoryGrid
         return true;
     }
 
+    /// <summary>
+    /// Clears grid cells occupied by the specified item and removes its origin record.
+    /// </summary>
     public void RemoveItem(ItemInstance item)
     {
-        if (item == null) return;
+        if (item == null)
+        {
+            return;
+        }
 
         itemOrigins.Remove(item);
 
@@ -90,7 +102,10 @@ public class InventoryGrid
 
     public ItemInstance GetItemAt(int x, int y)
     {
-        if (x < 0 || x >= Width || y < 0 || y >= Height) return null;
+        if (x < 0 || x >= Width || y < 0 || y >= Height)
+        {
+            return null;
+        }
         return grid[x, y];
     }
 }

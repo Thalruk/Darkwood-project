@@ -4,13 +4,11 @@ using UnityEngine;
 [Serializable]
 public class ItemInstance
 {
+    [Header("Definition & State")]
     public ItemData itemDef;
-
     public int currentStack = 1;
     public int currentAmmoInMag = 0;
-
-    // 0 = 0°, 1 = 90°, 2 = 180°, 3 = 270° (zgodnie z ruchem wskazówek zegara)
-    public int rotationStep = 0;
+    public int rotationStep = 0; // 0 = 0°, 1 = 90°, 2 = 180°, 3 = 270°
 
     [NonSerialized] public WorldItem worldLink;
 
@@ -27,11 +25,17 @@ public class ItemInstance
         }
     }
 
+    /// <summary>
+    /// Rotates the item instance 90 degrees clockwise.
+    /// </summary>
     public void RotateClockwise()
     {
         rotationStep = (rotationStep + 1) % 4;
     }
 
+    /// <summary>
+    /// Returns the base unrotated dimensions of the item shape.
+    /// </summary>
     public Vector2Int GetBaseDimensions()
     {
         if (itemDef == null || itemDef.gridShape == null || itemDef.gridShape.Length == 0)
@@ -50,18 +54,22 @@ public class ItemInstance
         return new Vector2Int(maxX + 1, maxY + 1);
     }
 
+    /// <summary>
+    /// Returns current dimensions accounting for rotation (swapping width/height on odd steps).
+    /// </summary>
     public Vector2Int GetDimensions()
     {
         Vector2Int baseDims = GetBaseDimensions();
-
         if (rotationStep % 2 != 0)
         {
             return new Vector2Int(baseDims.y, baseDims.x);
         }
-
         return baseDims;
     }
 
+    /// <summary>
+    /// Calculates and returns the grid coordinates occupied by the item based on its current rotation step.
+    /// </summary>
     public Vector2Int[] GetCurrentGridShape()
     {
         if (itemDef == null || itemDef.gridShape == null)
@@ -85,13 +93,13 @@ public class ItemInstance
             Vector2Int p = itemDef.gridShape[i];
             switch (step)
             {
-                case 1: // 90 stopni w prawo
+                case 1: // 90°
                     rotatedShape[i] = new Vector2Int(baseHeight - 1 - p.y, p.x);
                     break;
-                case 2: // 180 stopni
+                case 2: // 180°
                     rotatedShape[i] = new Vector2Int(baseWidth - 1 - p.x, baseHeight - 1 - p.y);
                     break;
-                case 3: // 270 stopni w prawo
+                case 3: // 270°
                     rotatedShape[i] = new Vector2Int(p.y, baseWidth - 1 - p.x);
                     break;
             }

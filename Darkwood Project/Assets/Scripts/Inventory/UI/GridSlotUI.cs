@@ -9,12 +9,13 @@ public class GridSlotUI : MonoBehaviour, IDropHandler, IPointerEnterHandler, IPo
     public PocketUI parentPocket;
     private Image image;
 
+    public static GridSlotUI currentlyHoveredSlot;
+
     private Color emptyColor = new Color(0.2f, 0.2f, 0.2f, 0.5f);
     private Color occupiedColor = new Color(0.8f, 0.8f, 0.8f, 1f);
     private Color validColor = new Color(0f, 1f, 0f, 0.5f);
     private Color invalidColor = new Color(1f, 0f, 0f, 0.5f);
 
-    public static GridSlotUI currentlyHoveredSlot;
     private void Awake()
     {
         image = GetComponent<Image>();
@@ -72,7 +73,6 @@ public class GridSlotUI : MonoBehaviour, IDropHandler, IPointerEnterHandler, IPo
             DraggableItem droppedItem = eventData.pointerDrag.GetComponent<DraggableItem>();
             if (droppedItem != null)
             {
-                // 1. Upuszczanie na ziemię (Lewy Panel)
                 if (parentPocket.logicGrid.IsGround)
                 {
                     if (droppedItem.itemInstance.worldLink == null)
@@ -95,7 +95,6 @@ public class GridSlotUI : MonoBehaviour, IDropHandler, IPointerEnterHandler, IPo
                     return;
                 }
 
-                // 2. Upuszczanie do kieszeni (Prawy Panel)
                 int targetX = x - droppedItem.grabbedCellOffset.x;
                 int targetY = y - droppedItem.grabbedCellOffset.y;
 
@@ -110,13 +109,10 @@ public class GridSlotUI : MonoBehaviour, IDropHandler, IPointerEnterHandler, IPo
                     droppedItem.DestroyWorldLink();
                     Destroy(droppedItem.gameObject);
 
-                    // Odświeżamy UI TYLKO wtedy, gdy faktycznie udało się włożyć przedmiot w nowe miejsce!
                     InventoryUI.Instance.RefreshUI();
                 }
                 else
                 {
-                    // Jeśli się nie udało (np. kolizja z innym przedmiotem lub wyjście poza siatkę),
-                    // czyścimy podświetlenie, a OnEndDrag sam odłoży przedmiot na stare miejsce.
                     parentPocket.RefreshEntireGrid();
                 }
             }
