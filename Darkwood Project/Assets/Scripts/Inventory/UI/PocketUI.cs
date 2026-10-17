@@ -63,8 +63,7 @@ public class PocketUI : MonoBehaviour
         Vector3 max = new Vector3(float.MinValue, float.MinValue, float.MinValue);
         Vector3[] corners = new Vector3[4];
 
-        // Sprawdzamy realne rogi każdego slotu wchodzącego w skład kształtu przedmiotu
-        foreach (Vector2Int shapePos in item.itemDef.gridShape)
+        foreach (Vector2Int shapePos in item.GetCurrentGridShape())
         {
             int slotX = Mathf.Clamp(startX + shapePos.x, 0, logicGrid.Width - 1);
             int slotY = Mathf.Clamp(startY + shapePos.y, 0, logicGrid.Height - 1);
@@ -72,12 +71,10 @@ public class PocketUI : MonoBehaviour
             RectTransform slotRect = uiSlots[slotX, slotY].GetComponent<RectTransform>();
             slotRect.GetWorldCorners(corners);
 
-            // corners[0] to lewy dolny róg, corners[2] to prawy górny róg w przestrzeni świata
             min = Vector3.Min(min, corners[0]);
             max = Vector3.Max(max, corners[2]);
         }
 
-        // Prawdziwy geometryczny środek wszystkich zajętych kratek
         return (min + max) * 0.5f;
     }
 
@@ -85,7 +82,7 @@ public class PocketUI : MonoBehaviour
     {
         bool canPlace = logicGrid.CanPlaceItem(item, startX, startY);
 
-        foreach (Vector2Int shapePos in item.itemDef.gridShape)
+        foreach (Vector2Int shapePos in item.GetCurrentGridShape())
         {
             int targetX = startX + shapePos.x;
             int targetY = startY + shapePos.y;
@@ -99,7 +96,7 @@ public class PocketUI : MonoBehaviour
 
     public void ClearHighlight(ItemInstance item, int startX, int startY)
     {
-        foreach (Vector2Int shapePos in item.itemDef.gridShape)
+        foreach (Vector2Int shapePos in item.GetCurrentGridShape())
         {
             int targetX = startX + shapePos.x;
             int targetY = startY + shapePos.y;

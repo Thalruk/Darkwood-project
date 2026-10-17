@@ -20,25 +20,41 @@ public class InventoryGrid
 
     public bool CanPlaceItem(ItemInstance item, int startX, int startY)
     {
-        if (item == null || item.itemDef == null || item.itemDef.gridShape == null) return false;
-        if (grid == null) return false;
+        if (item == null || item.itemDef == null || item.itemDef.gridShape == null)
+        {
+            return false;
+        }
+        if (grid == null)
+        {
+            return false;
+        }
 
-        foreach (Vector2Int shapePos in item.itemDef.gridShape)
+        foreach (Vector2Int shapePos in item.GetCurrentGridShape())
         {
             int targetX = startX + shapePos.x;
             int targetY = startY + shapePos.y;
 
-            if (targetX < 0 || targetX >= Width || targetY < 0 || targetY >= Height) return false;
-            if (grid[targetX, targetY] != null) return false;
+            if (targetX < 0 || targetX >= Width || targetY < 0 || targetY >= Height)
+            {
+                return false;
+            }
+            if (grid[targetX, targetY] != null)
+            {
+                return false;
+            }
         }
 
         return true;
     }
+
     public bool TryPlaceItem(ItemInstance item, int startX, int startY)
     {
-        if (!CanPlaceItem(item, startX, startY)) return false;
+        if (!CanPlaceItem(item, startX, startY))
+        {
+            return false;
+        }
 
-        foreach (Vector2Int shapePos in item.itemDef.gridShape)
+        foreach (Vector2Int shapePos in item.GetCurrentGridShape())
         {
             int targetX = startX + shapePos.x;
             int targetY = startY + shapePos.y;

@@ -54,28 +54,35 @@ public class EquipmentManager : MonoBehaviour
 
     public bool TryStoreInPockets(ItemInstance item)
     {
-        foreach (InventoryGrid grid in activeBackpackGrids)
+        if (TryPlaceInGridList(activeBackpackGrids, item)) return true;
+        if (TryPlaceInGridList(activePantsGrids, item)) return true;
+
+        return false;
+    }
+
+    private bool TryPlaceInGridList(List<InventoryGrid> grids, ItemInstance item)
+    {
+        int initialRotation = item.rotationStep;
+
+        foreach (InventoryGrid grid in grids)
         {
             for (int y = 0; y < grid.Height; y++)
             {
                 for (int x = 0; x < grid.Width; x++)
                 {
-                    if (grid.TryPlaceItem(item, x, y)) return true;
+                    for (int rot = 0; rot < 4; rot++)
+                    {
+                        item.rotationStep = (initialRotation + rot) % 4;
+                        if (grid.TryPlaceItem(item, x, y))
+                        {
+                            return true;
+                        }
+                    }
                 }
             }
         }
 
-        foreach (InventoryGrid grid in activePantsGrids)
-        {
-            for (int y = 0; y < grid.Height; y++)
-            {
-                for (int x = 0; x < grid.Width; x++)
-                {
-                    if (grid.TryPlaceItem(item, x, y)) return true;
-                }
-            }
-        }
-
+        item.rotationStep = initialRotation;
         return false;
     }
 

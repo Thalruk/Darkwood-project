@@ -14,6 +14,7 @@ public class GridSlotUI : MonoBehaviour, IDropHandler, IPointerEnterHandler, IPo
     private Color validColor = new Color(0f, 1f, 0f, 0.5f);
     private Color invalidColor = new Color(1f, 0f, 0f, 0.5f);
 
+    public static GridSlotUI currentlyHoveredSlot;
     private void Awake()
     {
         image = GetComponent<Image>();
@@ -38,6 +39,7 @@ public class GridSlotUI : MonoBehaviour, IDropHandler, IPointerEnterHandler, IPo
 
     public void OnPointerEnter(PointerEventData eventData)
     {
+        currentlyHoveredSlot = this;
         if (DraggableItem.currentlyDraggedItem == null)
         {
             return;
@@ -49,6 +51,11 @@ public class GridSlotUI : MonoBehaviour, IDropHandler, IPointerEnterHandler, IPo
 
     public void OnPointerExit(PointerEventData eventData)
     {
+        if (currentlyHoveredSlot == this)
+        {
+            currentlyHoveredSlot = null;
+        }
+
         if (DraggableItem.currentlyDraggedItem == null)
         {
             return;

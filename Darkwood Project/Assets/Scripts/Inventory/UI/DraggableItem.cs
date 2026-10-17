@@ -21,6 +21,7 @@ public class DraggableItem : MonoBehaviour, IBeginDragHandler, IDragHandler, IEn
 
     private Transform fallbackParent;
     private Vector3 fallbackPosition;
+    private int originalRotationStep;
     private Image rootImage;
     private Vector3 dragOffset;
 
@@ -35,6 +36,63 @@ public class DraggableItem : MonoBehaviour, IBeginDragHandler, IDragHandler, IEn
             le = gameObject.AddComponent<LayoutElement>();
         }
         le.ignoreLayout = true;
+    }
+
+    private void Update()
+    {
+        if (currentlyDraggedItem == this && Input.GetKeyDown(KeyCode.R))
+        {
+            RotateDraggedItem();
+        }
+    }
+
+    private void RotateDraggedItem()
+    {
+        if (itemInstance == null || itemInstance.itemDef == null)
+        {
+            return;
+        }
+
+        if (GridSlotUI.currentlyHoveredSlot != null)
+        {
+            GridSlotUI slot = GridSlotUI.currentlyHoveredSlot;
+            slot.parentPocket.ClearHighlight(itemInstance, slot.x - grabbedCellOffset.x, slot.y - grabbedCellOffset.y);
+        }
+
+        // Obrót o kolejne 90 stopni (0 -> 1 -> 2 -> 3 -> 0)
+        itemInstance.RotateClockwise();
+        BuildVisualShape();
+
+        Vector2Int newDims = itemInstance.GetDimensions();
+        grabbedCellOffset = new Vector2Int(newDims.x / 2, newDims.y / 2);
+
+        Canvas canvas = GetComponentInParent<Canvas>();
+        Transform rootTransform = canvas != null ? canvas.transform : transform.root;
+
+        RectTransformUtility.ScreenPointToWorldPointInRectangle(
+            rootTransform as RectTransform,
+            Input.mousePosition,
+            canvas != null ? canvas.worldCamera : null,
+            out Vector3 worldMousePos
+        );
+
+        float scaleFactor = canvas != null ? canvas.scaleFactor : 1f;
+        float step = (cellSize + spacing) * scaleFactor;
+
+        float centerCellX = (newDims.x - 1) * 0.5f;
+        float centerCellY = (newDims.y - 1) * 0.5f;
+
+        float shiftX = (centerCellX - grabbedCellOffset.x) * step;
+        float shiftY = (grabbedCellOffset.y - centerCellY) * step;
+
+        dragOffset = new Vector3(shiftX, shiftY, 0f);
+        transform.position = worldMousePos + dragOffset;
+
+        if (GridSlotUI.currentlyHoveredSlot != null)
+        {
+            GridSlotUI slot = GridSlotUI.currentlyHoveredSlot;
+            slot.parentPocket.HighlightShape(itemInstance, slot.x - grabbedCellOffset.x, slot.y - grabbedCellOffset.y);
+        }
     }
 
     public void BuildVisualShape()
@@ -69,7 +127,7 @@ public class DraggableItem : MonoBehaviour, IBeginDragHandler, IDragHandler, IEn
         visualRect.anchorMax = new Vector2(0.5f, 0.5f);
         visualRect.pivot = new Vector2(0.5f, 0.5f);
 
-        if (currentEquipmentSlot != null)
+        if (currentEquipmentSlot != null && currentlyDraggedItem != this)
         {
             RectTransform slotRect = currentEquipmentSlot.GetComponent<RectTransform>();
             float equipSize = (slotRect != null && slotRect.rect.width > 0) ? slotRect.rect.width : 128f;
@@ -79,18 +137,26 @@ public class DraggableItem : MonoBehaviour, IBeginDragHandler, IDragHandler, IEn
 
             visualRect.sizeDelta = new Vector2(equipSize * 0.9f, equipSize * 0.9f);
             visualRect.anchoredPosition = Vector2.zero;
+            visualRect.localEulerAngles = Vector3.zero;
         }
         else
         {
-            Vector2Int dims = GetEffectiveDimensions();
-            float fullWidth = (dims.x * cellSize) + ((dims.x - 1) * spacing);
-            float fullHeight = (dims.y * cellSize) + ((dims.y - 1) * spacing);
+            Vector2Int currentDims = itemInstance.GetDimensions();
+            float fullWidth = (currentDims.x * cellSize) + ((currentDims.x - 1) * spacing);
+            float fullHeight = (currentDims.y * cellSize) + ((currentDims.y - 1) * spacing);
 
             rootRect.sizeDelta = new Vector2(fullWidth, fullHeight);
 
+            Vector2Int baseDims = itemInstance.GetBaseDimensions();
+            float baseWidth = (baseDims.x * cellSize) + ((baseDims.x - 1) * spacing);
+            float baseHeight = (baseDims.y * cellSize) + ((baseDims.y - 1) * spacing);
+
             float scale = 0.9f;
-            visualRect.sizeDelta = new Vector2(fullWidth * scale, fullHeight * scale);
+            visualRect.sizeDelta = new Vector2(baseWidth * scale, baseHeight * scale);
             visualRect.anchoredPosition = Vector2.zero;
+
+            // Obracamy grafikę wielokrotnością -90 stopni (0°, -90°, -180°, -270°)
+            visualRect.localEulerAngles = new Vector3(0f, 0f, -90f * itemInstance.rotationStep);
         }
 
         Image visualImage = visualObj.AddComponent<Image>();
@@ -107,23 +173,6 @@ public class DraggableItem : MonoBehaviour, IBeginDragHandler, IDragHandler, IEn
         }
     }
 
-    public Vector2Int GetEffectiveDimensions()
-    {
-        if (itemInstance == null || itemInstance.itemDef == null || itemInstance.itemDef.gridShape == null || itemInstance.itemDef.gridShape.Length == 0)
-        {
-            return Vector2Int.one;
-        }
-
-        int maxX = 0;
-        int maxY = 0;
-        foreach (Vector2Int pos in itemInstance.itemDef.gridShape)
-        {
-            if (pos.x > maxX) maxX = pos.x;
-            if (pos.y > maxY) maxY = pos.y;
-        }
-
-        return new Vector2Int(maxX + 1, maxY + 1);
-    }
     public void OnBeginDrag(PointerEventData eventData)
     {
         if (eventData.button != PointerEventData.InputButton.Left)
@@ -134,12 +183,17 @@ public class DraggableItem : MonoBehaviour, IBeginDragHandler, IDragHandler, IEn
         currentlyDraggedItem = this;
         fallbackParent = transform.parent;
         fallbackPosition = transform.position;
+        originalRotationStep = itemInstance.rotationStep;
 
         RectTransform rectTransform = GetComponent<RectTransform>();
 
         if (currentEquipmentSlot != null || currentSlot == null)
         {
             grabbedCellOffset = Vector2Int.zero;
+            if (currentEquipmentSlot != null)
+            {
+                BuildVisualShape();
+            }
         }
         else
         {
@@ -150,7 +204,7 @@ public class DraggableItem : MonoBehaviour, IBeginDragHandler, IDragHandler, IEn
                 out Vector2 localMousePos
             );
 
-            Vector2Int dims = GetEffectiveDimensions();
+            Vector2Int dims = itemInstance.GetDimensions();
             float fromLeft = localMousePos.x + (rectTransform.rect.width * 0.5f);
             float fromTop = (rectTransform.rect.height * 0.5f) - localMousePos.y;
 
@@ -225,6 +279,9 @@ public class DraggableItem : MonoBehaviour, IBeginDragHandler, IDragHandler, IEn
 
         if (transform.parent == rootTransform)
         {
+            itemInstance.rotationStep = originalRotationStep;
+            BuildVisualShape();
+
             if (currentSlot != null)
             {
                 currentSlot.parentPocket.logicGrid.TryPlaceItem(itemInstance, currentSlot.x, currentSlot.y);
