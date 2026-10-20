@@ -94,6 +94,28 @@ public class DraggableItem : MonoBehaviour, IBeginDragHandler, IDragHandler, IEn
         }
     }
 
+    /// <summary>
+    /// Safely aborts an active drag operation and restores the item to its previous state.
+    /// </summary>
+    public void CancelDrag()
+    {
+        OnItemDragEnd?.Invoke();
+        currentlyDraggedItem = null;
+
+        if (this == null || gameObject == null)
+        {
+            return;
+        }
+
+        itemInstance.rotationStep = originalRotationStep;
+
+        if (currentSlot != null)
+        {
+            currentSlot.parentPocket.logicGrid.TryPlaceItem(itemInstance, currentSlot.x, currentSlot.y);
+        }
+
+        Destroy(gameObject);
+    }
     public void BuildVisualShape()
     {
         if (rootImage == null)
@@ -345,6 +367,12 @@ public class DraggableItem : MonoBehaviour, IBeginDragHandler, IDragHandler, IEn
                     break;
                 case EquipmentType.Backpack:
                     success = em.EquipBackpack(itemInstance);
+                    break;
+                case EquipmentType.Head:
+                    success = em.EquipHead(itemInstance);
+                    break;
+                case EquipmentType.Body:
+                    success = em.EquipBody(itemInstance);
                     break;
             }
 

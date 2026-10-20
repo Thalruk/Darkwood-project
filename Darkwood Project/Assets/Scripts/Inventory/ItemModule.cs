@@ -44,5 +44,6 @@ public class PocketDefinition
 [Serializable]
 public class ContainerModule : ItemModule
 {
+    public int quickSlotsCount = 0;
     public List<PocketDefinition> pockets = new List<PocketDefinition>();
 }

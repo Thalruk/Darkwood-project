@@ -58,8 +58,10 @@ public class InventoryUI : MonoBehaviour
             ClearContainer(lootContainer);
         }
 
-        BuildPocketGroup("Pants", equipmentManager.GetActivePantsGrids());
         BuildPocketGroup("Backpack", equipmentManager.GetActiveBackpackGrids());
+        BuildPocketGroup("Body", equipmentManager.GetActiveBodyGrids());
+        BuildPocketGroup("Belt", equipmentManager.GetActiveBeltGrids());
+        BuildPocketGroup("Pants", equipmentManager.GetActivePantsGrids());
 
         if (lootContainer != null && equipmentManager.playerTransform != null)
         {

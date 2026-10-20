@@ -6,20 +6,21 @@ public class InventoryGrid
     public int Width { get; private set; }
     public int Height { get; private set; }
     public bool IsGround { get; private set; }
+    public ItemInstance OwnerItem { get; private set; }
 
     private ItemInstance[,] grid;
     private Dictionary<ItemInstance, Vector2Int> itemOrigins = new Dictionary<ItemInstance, Vector2Int>();
-
-    public InventoryGrid(int width, int height, bool isGround = false)
+    public InventoryGrid(int width, int height, bool isGround = false, ItemInstance ownerItem = null)
     {
         Width = width;
         Height = height;
         IsGround = isGround;
+        OwnerItem = ownerItem;
         grid = new ItemInstance[width, height];
     }
 
     /// <summary>
-    /// Checks if an item can be placed at given coordinates without overlapping or going out of bounds.
+    /// Checks if an item can be placed at given coordinates without overlapping, going out of bounds, or placing a container inside itself.
     /// </summary>
     public bool CanPlaceItem(ItemInstance item, int startX, int startY)
     {
@@ -28,6 +29,11 @@ public class InventoryGrid
             return false;
         }
         if (grid == null)
+        {
+            return false;
+        }
+
+        if (OwnerItem != null && item == OwnerItem)
         {
             return false;
         }
